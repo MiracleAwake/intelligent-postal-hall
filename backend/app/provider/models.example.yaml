@@ -1,0 +1,21 @@
+# 模型档案。密钥不写在这里，云端只记环境变量名。
+# 本机只使用已经存在的 deepseek-r1:1.5b，不要为对齐课件再拉别的模型。
+
+profiles:
+  - id: hall_local
+    display_name: 厅堂本地
+    protocol: ollama
+    base_url: http://127.0.0.1:11434
+    model: deepseek-r1:1.5b
+    timeout_seconds: 120
+    failure_limit: 3
+    is_default: true
+  - id: hall_cloud
+    display_name: GLM-4.7-FlashX
+    protocol: openai_compat
+    base_url: https://open.bigmodel.cn/api/paas/v4/
+    model: GLM-4.7-FlashX
+    api_key_env: GLM_API_KEY
+    timeout_seconds: 90
+    failure_limit: 3
+    is_default: false

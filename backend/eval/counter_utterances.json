@@ -1,0 +1,106 @@
+{
+  "profile_id": "hall_cloud",
+  "cases": [
+    {
+      "id": "add_and_term",
+      "text": "请帮我把这个客户的存单连息转存为三年期，并新增五万元，打印一张新存单",
+      "expect": {
+        "intents": ["改存期", "加钱"],
+        "interest": "连本带息",
+        "new_term": "3年",
+        "add_amount": "50000",
+        "print_new_certificate": true
+      }
+    },
+    {
+      "id": "take_interest",
+      "text": "利息取出来用，本金再存一年，先别打印",
+      "expect": {
+        "intents": ["取息", "改存期"],
+        "interest": "取息",
+        "new_term": "1年",
+        "add_amount": null,
+        "print_new_certificate": false
+      }
+    },
+    {
+      "id": "keep",
+      "text": "我就想接着存，存期不用改，钱也不加",
+      "expect": {
+        "intents": ["接着存"],
+        "interest": "未说",
+        "new_term": null,
+        "add_amount": null,
+        "print_new_certificate": false
+      }
+    },
+    {
+      "id": "term_only",
+      "text": "一年到期了，改成五年，钱不加，打印新存单",
+      "expect": {
+        "intents": ["改存期"],
+        "interest": "未说",
+        "new_term": "5年",
+        "add_amount": null,
+        "print_new_certificate": true
+      }
+    },
+    {
+      "id": "to_demand",
+      "text": "不要转存了，转成活期，打到绿卡上",
+      "expect": {
+        "intents": ["转活期"],
+        "interest": "未说",
+        "new_term": null,
+        "add_amount": null,
+        "print_new_certificate": false
+      }
+    },
+    {
+      "id": "missing_term",
+      "text": "存单和身份证都带来了，新存期客户还没定",
+      "expect": {
+        "intents": ["改存期"],
+        "interest": "未说",
+        "new_term": null,
+        "add_amount": null,
+        "print_new_certificate": false,
+        "missing": ["new_term"]
+      }
+    },
+    {
+      "id": "twenty_thousand",
+      "text": "这笔两万块，连本带息转三年",
+      "expect": {
+        "intents": ["改存期"],
+        "interest": "连本带息",
+        "new_term": "3年",
+        "base_amount": "20000",
+        "add_amount": null,
+        "print_new_certificate": false
+      }
+    },
+    {
+      "id": "cash_add",
+      "text": "客户要再加八万现金，存期改成两年",
+      "expect": {
+        "intents": ["改存期", "加钱"],
+        "interest": "未说",
+        "new_term": "2年",
+        "add_amount": "80000",
+        "print_new_certificate": false
+      }
+    },
+    {
+      "id": "agent",
+      "text": "存款人没来，是代理人拿着存单来办改存期",
+      "expect": {
+        "intents": ["改存期"],
+        "party": "代理",
+        "new_term": null,
+        "print_new_certificate": false,
+        "missing": ["new_term"]
+      }
+    }
+  ]
+}

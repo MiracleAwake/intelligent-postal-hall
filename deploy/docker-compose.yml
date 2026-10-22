@@ -1,0 +1,28 @@
+# 本机开发用。写代码时不必启动；要建表或联调时再 `docker compose up -d`。
+# 业务库与会话库都在这一台 MySQL 里，Chroma 单独一个服务。
+
+services:
+  mysql:
+    image: mysql:8.4
+    environment:
+      MYSQL_ROOT_PASSWORD: zhiyou_root
+      MYSQL_USER: zhiyou
+      MYSQL_PASSWORD: zhiyou
+      MYSQL_DATABASE: biz
+    ports:
+      - "3306:3306"
+    volumes:
+      - zhiyou_mysql:/var/lib/mysql
+      - ./sql:/docker-entrypoint-initdb.d:ro
+    command: ["--character-set-server=utf8mb4", "--collation-server=utf8mb4_unicode_ci"]
+
+  chroma:
+    image: chromadb/chroma:1.0.0
+    ports:
+      - "8000:8000"
+    volumes:
+      - zhiyou_chroma:/data
+
+volumes:
+  zhiyou_mysql:
+  zhiyou_chroma:

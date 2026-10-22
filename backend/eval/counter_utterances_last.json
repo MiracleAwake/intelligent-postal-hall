@@ -1,0 +1,189 @@
+[
+  {
+    "id": "add_and_term",
+    "text": "请帮我把这个客户的存单连息转存为三年期，并新增五万元，打印一张新存单",
+    "ok": false,
+    "misses": [
+      "intents ['改存期'] != ['改存期', '加钱']"
+    ],
+    "auth_likely": true,
+    "actual": {
+      "intents": [
+        "改存期"
+      ],
+      "interest": "连本带息",
+      "new_term": "3年",
+      "base_amount": null,
+      "add_amount": "50000",
+      "print_new_certificate": true,
+      "party": "本人",
+      "missing": [
+        "base_amount"
+      ],
+      "summary": "连息转存三年，新增五万元，打印新存单"
+    }
+  },
+  {
+    "id": "take_interest",
+    "text": "利息取出来用，本金再存一年，先别打印",
+    "ok": true,
+    "misses": [],
+    "auth_likely": false,
+    "actual": {
+      "intents": [
+        "取息",
+        "改存期"
+      ],
+      "interest": "取息",
+      "new_term": "1年",
+      "base_amount": null,
+      "add_amount": null,
+      "print_new_certificate": false,
+      "party": "本人",
+      "missing": [
+        "amount",
+        "base_amount",
+        "add_amount"
+      ],
+      "summary": "取息后续存一年"
+    }
+  },
+  {
+    "id": "keep",
+    "text": "我就想接着存，存期不用改，钱也不加",
+    "ok": true,
+    "misses": [],
+    "auth_likely": false,
+    "actual": {
+      "intents": [
+        "接着存"
+      ],
+      "interest": "未说",
+      "new_term": null,
+      "base_amount": null,
+      "add_amount": null,
+      "print_new_certificate": false,
+      "party": "本人",
+      "missing": [
+        "new_term",
+        "base_amount",
+        "add_amount"
+      ],
+      "summary": "接着存，不追加资金，也不打印"
+    }
+  },
+  {
+    "id": "term_only",
+    "text": "一年到期了，改成五年，钱不加，打印新存单",
+    "ok": true,
+    "misses": [],
+    "auth_likely": false,
+    "actual": {
+      "intents": [
+        "改存期"
+      ],
+      "interest": "未说",
+      "new_term": "5年",
+      "base_amount": null,
+      "add_amount": null,
+      "print_new_certificate": true,
+      "party": "本人",
+      "missing": [
+        "base_amount",
+        "add_amount"
+      ],
+      "summary": "一年到期了，改成五年，钱不加，打印新存单"
+    }
+  },
+  {
+    "id": "to_demand",
+    "text": "不要转存了，转成活期，打到绿卡上",
+    "ok": false,
+    "misses": [
+      "The read operation timed out"
+    ],
+    "actual": null
+  },
+  {
+    "id": "missing_term",
+    "text": "存单和身份证都带来了，新存期客户还没定",
+    "ok": false,
+    "misses": [
+      "The read operation timed out"
+    ],
+    "actual": null
+  },
+  {
+    "id": "twenty_thousand",
+    "text": "这笔两万块，连本带息转三年",
+    "ok": false,
+    "misses": [
+      "base_amount None != 20000"
+    ],
+    "auth_likely": false,
+    "actual": {
+      "intents": [
+        "改存期"
+      ],
+      "interest": "连本带息",
+      "new_term": "3年",
+      "base_amount": null,
+      "add_amount": null,
+      "print_new_certificate": false,
+      "party": "本人",
+      "missing": [
+        "base_amount",
+        "add_amount",
+        "print_new_certificate"
+      ],
+      "summary": "两万块连本带息转三年"
+    }
+  },
+  {
+    "id": "cash_add",
+    "text": "客户要再加八万现金，存期改成两年",
+    "ok": true,
+    "misses": [],
+    "auth_likely": true,
+    "actual": {
+      "intents": [
+        "加钱",
+        "改存期"
+      ],
+      "interest": "未说",
+      "new_term": "2年",
+      "base_amount": null,
+      "add_amount": "80000",
+      "print_new_certificate": false,
+      "party": "本人",
+      "missing": [
+        "interest",
+        "base_amount",
+        "print_new_certificate"
+      ],
+      "summary": "加钱八万改存期两年"
+    }
+  },
+  {
+    "id": "agent",
+    "text": "存款人没来，是代理人拿着存单来办改存期",
+    "ok": true,
+    "misses": [],
+    "auth_likely": false,
+    "actual": {
+      "intents": [
+        "改存期"
+      ],
+      "interest": "未说",
+      "new_term": null,
+      "base_amount": null,
+      "add_amount": null,
+      "print_new_certificate": false,
+      "party": "代理",
+      "missing": [
+        "new_term"
+      ],
+      "summary": "代理人改存期"
+    }
+  }
+]
