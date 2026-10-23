@@ -25,6 +25,9 @@ class AppointmentTest(unittest.TestCase):
         self.assertEqual(teller, ["周××"])
         self.assertEqual(postal, ["冯××"])
         self.assertEqual(lobby, ["冯××", "周××"])
+        by_name = {row["name"]: row["cid"] for row in view("P4", path=self.path)["items"]}
+        self.assertEqual(by_name["周××"], "c009")
+        self.assertEqual(by_name["冯××"], "c010")
         self.assertEqual(admin, [])
 
     def test_remind_and_reappoint_stay_on_the_row(self):

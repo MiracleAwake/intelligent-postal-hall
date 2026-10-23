@@ -52,6 +52,7 @@
       else tip('就在这一页');
       return;
     }
+    if (window.PAGE_BASE && dest.indexOf(window.PAGE_BASE) !== 0) dest = window.PAGE_BASE + dest;
     location.href = dest;
   }
 

@@ -9,13 +9,18 @@ from pathlib import Path
 
 DB_PATH = Path(__file__).resolve().parents[3] / "deploy" / "biz.sqlite"
 
-# 后端 role_code。理财、综合、保安不进 post。
+# 后端 role_code 和壳岗位不是同一套，不把库改成壳代号。
+# 支局经理=P3，普通柜员=P1，邮政营业=P2，大堂经理=P4，管理员=P5。
+# 综合柜员、理财经理、保安没有后端 role_code。网点只记在 post 所属的 org，不另存站点列。
 _POSTS = (
     ("df", "P3", "支局经理"),
     ("df", "P1", "普通柜员"),
     ("df", "P2", "邮政营业"),
     ("df", "P4", "大堂经理"),
     ("hq", "P5", "管理员"),
+    ("df", "", "综合柜员"),
+    ("df", "", "理财经理"),
+    ("df", "", "保安"),
 )
 
 # 工号、姓名、岗位名、能否进门、派到哪个后端岗位。姓名保持原型写法。
@@ -28,7 +33,7 @@ _STAFF = (
     ("1002", "钱××", "综合柜员", "no_page", ""),
     ("1010", "褚××", "综合柜员", "no_page", ""),
     ("1018", "尤××", "理财经理", "no_page", ""),
-    ("1022", "施××", "保安", "refuse", ""),
+    ("1022", "施××", "保安", "no_page", ""),
 )
 
 # 客户页上已经有的人。证件中间十位用序号补齐，掩码仍对得上页面上的前四后四。
@@ -209,16 +214,22 @@ def ensure(path: Path | None = None) -> None:
                 "INSERT INTO post (org_id, role_code, title) VALUES (?, ?, ?)",
                 (org[code], role, title),
             )
-        post = {row["role_code"]: row["id"] for row in conn.execute("SELECT id, role_code FROM post")}
+        post_by_role = {}
+        post_by_title = {}
+        for row in conn.execute("SELECT id, role_code, title FROM post"):
+            if row["role_code"]:
+                post_by_role[row["role_code"]] = row["id"]
+            post_by_title[row["title"]] = row["id"]
         for no, name, title, state, role in _STAFF:
             cur = conn.execute(
                 "INSERT INTO staff (employee_no, name, title, account_state) VALUES (?, ?, ?, ?)",
                 (no, name, title, state),
             )
-            if role:
+            post_id = post_by_role.get(role) if role else post_by_title.get(title)
+            if post_id:
                 conn.execute(
                     "INSERT INTO assignment (staff_id, post_id) VALUES (?, ?)",
-                    (cur.lastrowid, post[role]),
+                    (cur.lastrowid, post_id),
                 )
         for row in customers():
             conn.execute(
@@ -247,12 +258,20 @@ def list_staff(path: Path | None = None) -> list[dict]:
     conn = connect(path)
     try:
         rows = conn.execute(
-            """SELECT s.employee_no, s.name, s.title, s.account_state, p.role_code
+            """SELECT s.employee_no, s.name, s.title, s.account_state,
+                      p.role_code, o.code AS org_code, o.name AS org_name
                FROM staff s
                LEFT JOIN assignment a ON a.staff_id = s.id
                LEFT JOIN post p ON p.id = a.post_id
+               LEFT JOIN org o ON o.id = p.org_id
                ORDER BY s.employee_no"""
         ).fetchall()
     finally:
         conn.close()
-    return [dict(row) for row in rows]
+    out = []
+    for row in rows:
+        item = dict(row)
+        if item.get("role_code") == "":
+            item["role_code"] = None
+        out.append(item)
+    return out

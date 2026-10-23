@@ -17,35 +17,40 @@
     return isoDay(d);
   }
   var DAY = isoDay(new Date());
+  /* 后端 role_code 与壳岗位不是同一套，只在这里映射，不改库：P3 支局经理→壳 P1，P1 普通柜员→壳 P2，P2 邮政营业→壳 P3。 */
   var ROLE_FROM_API = { P3: 'P1', P1: 'P2', P2: 'P3', P4: 'P4', P5: 'P5' };
   function toShellRole(code) { return ROLE_FROM_API[code] || ''; }
   var STAFF = [
-    { no: '1001', name: '王××', role: 'P1', st: '在岗', gap: '', enter: true, title: '支局经理', acct: 'enter' },
-    { no: '1003', name: '赵××', role: 'P2', st: '在岗', gap: '', enter: true, title: '普通柜员', acct: 'enter' },
-    { no: '1017', name: '秦××', role: 'P3', st: '在岗', gap: '', enter: true, title: '邮政营业', acct: 'enter' },
-    { no: '1004', name: '孙××', role: 'P4', st: '在岗', gap: '', enter: true, title: '大堂经理', acct: 'enter' },
-    { no: '9001', name: '区管理员', role: 'P5', st: '在岗', gap: '', enter: true, title: '管理员', acct: 'enter' },
-    { no: '1002', name: '钱××', role: '', st: '在岗', gap: '后端无角色', enter: false, title: '综合柜员', acct: 'no_page' },
-    { no: '1010', name: '褚××', role: '', st: '在岗', gap: '后端无角色', enter: false, title: '综合柜员', acct: 'no_page' },
-    { no: '1018', name: '尤××', role: '', st: '在岗', gap: '后端无角色', enter: false, title: '理财经理', acct: 'no_page' },
-    { no: '1022', name: '施××', role: '', st: '拒绝', gap: '后端无角色', enter: false, title: '保安', acct: 'refuse' }
+    { no: '1001', name: '王××', role: 'P1', st: '在岗', gap: '', enter: true, title: '支局经理', acct: 'enter', orgCode: 'df' },
+    { no: '1003', name: '赵××', role: 'P2', st: '在岗', gap: '', enter: true, title: '普通柜员', acct: 'enter', orgCode: 'df' },
+    { no: '1017', name: '秦××', role: 'P3', st: '在岗', gap: '', enter: true, title: '邮政营业', acct: 'enter', orgCode: 'df' },
+    { no: '1004', name: '孙××', role: 'P4', st: '在岗', gap: '', enter: true, title: '大堂经理', acct: 'enter', orgCode: 'df' },
+    { no: '9001', name: '区管理员', role: 'P5', st: '在岗', gap: '', enter: true, title: '管理员', acct: 'enter', orgCode: 'hq' },
+    { no: '1002', name: '钱××', role: '', st: '在岗', gap: '后端无角色', enter: false, title: '综合柜员', acct: 'no_page', orgCode: 'df' },
+    { no: '1010', name: '褚××', role: '', st: '在岗', gap: '后端无角色', enter: false, title: '综合柜员', acct: 'no_page', orgCode: 'df' },
+    { no: '1018', name: '尤××', role: '', st: '在岗', gap: '后端无角色', enter: false, title: '理财经理', acct: 'no_page', orgCode: 'df' },
+    { no: '1022', name: '施××', role: '', st: '在岗', gap: '后端无角色', enter: false, title: '保安', acct: 'no_page', orgCode: 'df' }
   ];
+  var STAFF_SOURCE = 'fallback';
   var OFF = [];
-  /* 谁能投票：本网点在岗员工（含无页面岗位，后台默认同意），减本笔经办人；非本网点角色不参与。 */
+  /* 谁能投票：本网点在岗员工（含无页面岗位，后台默认同意），减本笔经办人；非本网点角色不参与。网点看 org，不看 role 空不空。 */
   function voterRow(s) {
-    return s.acct !== 'refuse' && s.st !== '拒绝' && !!s.role && s.role !== 'P5';
+    return s.orgCode === 'df' && s.acct !== 'refuse' && s.st !== '拒绝';
   }
   function agreeNo(no) {
     var s = STAFF.filter(function (x) { return x.no === no; })[0];
-    return !!(s && voterRow(s) && s.acct === 'no_page');
+    return !!(s && s.acct === 'no_page' && s.st !== '拒绝');
   }
   var VOTERS = STAFF.filter(voterRow).map(function (s) { return s.no; });
   var CH_CLS = { '存量维护': 'stock', '走访新拓': 'new', '电联唤醒': 'call', '厅堂转介': 'rec' };
   var ST = {
     ok: ['已完成 · 全票通过', 's-ok'], wait: ['待确认', 's-wait'],
-    draft: ['模型录入 · 待本人核对', 's-draft'], rej: ['已驳回', 's-rej']
+    draft: ['模型录入 · 待本人核对', 's-draft'], rej: ['已驳回', 's-rej'],
+    'no-roster': ['票数 —', 's-mute'], muted: ['票数 —', 's-mute']
   };
   var BASE = [
+    { t: '16:20', k: '活期', a: 7.0, u: 'money', src: '手工', byNo: '1004', vn: 1 },
+    { t: '08:10', k: '活期', a: 4.0, u: 'money', src: '手工', byNo: '1001', vn: 0, rj: [{ who: '1003', why: '金额不符', at: '08:12' }] },
     { t: '15:44', k: '理财', a: 12.0, u: 'money', src: '手工', byNo: '1002', vn: 11 },
     { t: '15:18', k: '活期', a: 8.0, u: 'money', src: '手工', byNo: '1003', vn: 19 },
     { t: '14:52', k: '活期', a: 10.0, u: 'money', src: '模型', byNo: '1004', vn: 0, draft: 1, cl: '崔××（尾号 0417）', ch: '走访新拓' },
@@ -85,10 +90,17 @@
   }
   function votesOf(r) { return r.v || (r.v = []); }
   function rejsOf(r) { return r.rj || (r.rj = []); }
+  function rosterOff() { return STAFF_SOURCE !== 'api'; }
   function stOf(r) {
     if (r.draft) return 'draft';
     if (rejsOf(r).length) return 'rej';
+    if (!needOf(r)) return 'no-roster';
+    if (rosterOff()) return 'muted';
     return votesOf(r).length >= needOf(r) ? 'ok' : 'wait';
+  }
+  function faceOf(r) { return ST[stOf(r)] || ST.muted; }
+  function offBanner() {
+    return rosterOff() ? '<div class="pf-off">名册未接入 · 当前是演示数据</div>' : '';
   }
   function pendingOf(r) {
     var v = votesOf(r);
@@ -113,6 +125,7 @@
       v + (u ? '<u>' + u + '</u>' : '') + '</div>' + (sub ? '<div class="s">' + sub + '</div>' : '') + '</div>';
   }
   function vbar(got, need, draft) {
+    if (rosterOff() || !need) return '<span class="pf-vt">票数 —</span>';
     if (draft) return '<span class="pf-vt">未开始计票</span>';
     var pct = need ? Math.round(got / need * 100) : 0;
     var cls = got >= need ? '' : 'warn';
@@ -140,7 +153,26 @@
       pool.forEach(function (n) { if (agreeNo(n) && r.v.indexOf(n) < 0) r.v.push(n); });
       r.agree = pool.filter(agreeNo);
       r.rj = r.rj || [];
+      var kept = voteStore()[voteKey(r)];
+      if (kept) {
+        r.v = kept.v || r.v;
+        r.proxy = kept.proxy || [];
+        r.absent = kept.absent || [];
+        r.rj = kept.rj || r.rj;
+      }
     });
+  }
+  function voteKey(r) { return r.t + '|' + byOf(r) + '|' + r.a; }
+  function voteStore() {
+    try { return JSON.parse(localStorage.getItem('hallVoteV1') || '{}'); } catch (e) { return {}; }
+  }
+  function saveVotes() {
+    if (!DATA.staff || DATA.staff.src !== 'api') return;
+    var bag = voteStore();
+    PERF.forEach(function (r) {
+      bag[voteKey(r)] = { v: r.v || [], proxy: r.proxy || [], absent: r.absent || [], rj: r.rj || [] };
+    });
+    try { localStorage.setItem('hallVoteV1', JSON.stringify(bag)); } catch (e) {}
   }
 
   var DR_NOCONTACT = ['未接通', '空号', '未面访成功'];
@@ -365,7 +397,7 @@
     },
     wait: {
       title:'平均等候时长报表 · 明细', sub:'厅堂口径 · 按小时段 · 更新于 15:47', icon:'g-clock',
-      kpi:[['当前等候','4','位'], ['平均等候','6.2','分钟'], ['最长等候','11','分钟']],
+      kpi:[['当前等候', null, '位'], ['平均等候','6.2','分钟'], ['最长等候','11','分钟']],
       cols:['时段', '取号', '平均等候', '最长等候', '叫号完成'],
       rows:[
         ['15:30–16:30', '5 位', '8.2 分钟', '14 分钟', '5 位'],
@@ -495,59 +527,222 @@
   function paintP4() {
     var board = $('v10Board');
     var home = $('p4home');
-    if (ROLE !== 'P4') { if (home) home.hidden = true; return; }
+    if (ROLE !== 'P4') {
+      if (home) home.hidden = true;
+      if (ROLE === 'P2' || ROLE === 'P3') {
+        fetch('/api/lobby?role=' + encodeURIComponent(ROLE)).then(function (r) { return r.json(); }).then(function (body) {
+          var host = $('ownQueue');
+          if (!host) {
+            host = document.createElement('section');
+            host.id = 'ownQueue';
+            host.className = 'block';
+            var hrow = document.querySelector('#content .hrow');
+            if (hrow) hrow.insertAdjacentElement('afterend', host);
+          }
+          host.innerHTML = '<h3>本条线等候</h3>' + queueGroups(body.queue || []);
+          syncWait(body.waiting != null ? body.waiting : (body.queue || []).length);
+        });
+      }
+      return;
+    }
     mount();
     board = $('v10Board');
     if (!board) return;
     if (!home) {
       home = document.createElement('div');
       home.id = 'p4home';
-      board.parentNode.insertBefore(home, board);
+      var hrow = document.querySelector('#content .hrow');
+      if (hrow) hrow.insertAdjacentElement('afterend', home);
+      else board.parentNode.insertBefore(home, board);
     }
     home.hidden = false;
     if (!$('quickrow')) {
       var q = document.createElement('div');
       q.id = 'quickrow';
-      q.innerHTML = ['识别客户', '为客户取号', '查看预约', '厅堂巡检'].map(function (t) {
-        return '<button type="button" data-jump="' + t + '">' + t + '</button>';
+      q.className = 'quickrow';
+      q.innerHTML = [
+        ['识别客户', 'g-scan', '接入身份 · 扫证 / 扫码认人', '先认人、再谈业务。扫码或扫证，认出来再引导，认不出转人工。'],
+        ['为客户取号', 'g-seat', '厅堂 · 代客取号', '问清业务再代取，号单交到客户手上。'],
+        ['查看预约', 'g-cal', '厅堂 · 今日预约', '提前看几点、谁、办什么、材料齐不齐。'],
+        ['厅堂巡检', 'g-verify', '厅堂 · 定时巡检', '走一圈看排队、设备、物料和通道。']
+      ].map(function (t) {
+        return '<button type="button" class="qbtn" data-jump="' + t[0] + '" data-lead="' + t[3] + '"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><use href="#' + t[1] + '"/></svg><span class="qt">' + t[0] + '</span></button>';
       }).join('');
-      home.appendChild(q);
+      var greet = document.querySelector('#content .greetcard');
+      (greet || home).appendChild(q);
     }
-    var slots = $('p4slots');
-    if (!slots) {
-      slots = document.createElement('div');
-      slots.id = 'p4slots';
-      home.appendChild(slots);
+    if (!$('p4floor')) {
+      var floor = document.createElement('div');
+      floor.id = 'p4floor';
+      floor.innerHTML = '<section class="block"><div class="blk-h"><h3>厅堂实时态势</h3><span class="sub">窗口与自助机 · 每 30 秒刷新</span><span class="sp"></span><span class="pill-live"><i></i>实时</span></div><div class="hallcols"><div><div class="hcol-t">服务窗口 <span id="p4WinN"></span></div><div class="hallgrid" id="p4Win"></div></div><div><div class="hcol-t">自助设备 <span id="p4KioskN"></span></div><div class="hallgrid" id="p4Kiosk"></div></div></div></section>' +
+        '<section class="block"><div class="blk-h"><h3>等候队列</h3><span class="sub">按业务类型排 · 可直接指定台席</span><span class="sp"></span><span class="pill-live"><i></i>叫号中</span></div><div class="qlist" id="p4Queue"></div></section>' +
+        '<section class="block" id="p4ApptBlock"><div class="blk-h"><h3>今日预约</h3><span class="sub">到店情况</span></div><div class="alist" id="p4Appt"></div></section>' +
+        '<section class="block"><div class="blk-h"><h3 id="p4BarTitle">厅堂客流时段分布</h3><span class="sub" id="p4BarSub">按小时 · 单位：人次</span></div><div class="bars" id="p4Bars"></div></section>' +
+        '<section class="block"><div class="blk-h"><h3>平板端 · 移动作业</h3><span class="sub">大堂经理随手持用 · 与母端同源会话</span></div><div class="tabletwrap"><div class="tablet"><div class="tab-cam"></div><div class="tab-scr"><div class="tab-top"><span>东风路支局 · 大堂</span><span class="tab-live"><i></i>在线</span></div><div class="tab-id"><div class="tid-i">识</div><div><div class="tid-t">识别客户</div><div class="tid-s">扫证 / 扫码，认人不让客户自证</div></div></div><div class="tab-acts" id="p4Tab"></div><div class="tab-call"><span class="tc-no" id="p4CallNo">—</span><span class="tc-t" id="p4CallItem">当前叫号</span><button type="button" class="tc-go" data-lobby="call">下一号</button></div></div></div><div class="tab-note" id="p4TabNote"></div></div></section>';
+      home.appendChild(floor);
     }
-    ['win', 'queue', 'appt'].forEach(function (part) {
-      var n = document.querySelector('[data-part="' + part + '"]');
-      if (n) slots.appendChild(n);
+    var kpiTitle = $('kpiTitle');
+    var kpiHead = kpiTitle && kpiTitle.closest ? kpiTitle.closest('.blk-h') : null;
+    var kpis = $('kpis');
+    var barTitle = $('p4BarTitle');
+    var barSec = barTitle && barTitle.closest ? barTitle.closest('section') : null;
+    if (kpiHead && kpis && barSec && kpiHead.parentNode !== barSec.parentNode) {
+      barSec.parentNode.insertBefore(kpiHead, barSec);
+      barSec.parentNode.insertBefore(kpis, barSec);
+    }
+    fetch('/api/lobby?role=' + encodeURIComponent(ROLE)).then(function (r) { return r.json(); }).then(function (body) {
+      paintLobby(body || {});
+    }).catch(function () {
+      var box = $('p4floor');
+      if (box && !box.querySelector('.pf-off')) box.insertAdjacentHTML('afterbegin', '<div class="pf-off">厅堂未接入</div>');
     });
-    if (!$('p4wait')) {
-      var w = document.createElement('section');
-      w.id = 'p4wait';
-      w.innerHTML = '<h3>厅堂取号时段分布</h3><p>按小时 · 单位：人次（取号口径）</p><div id="p4bars"></div>';
-      home.appendChild(w);
+  }
+  function queueGroups(queue) {
+    var lines = ['代理金融', '邮政营业'];
+    var html = lines.map(function (line) {
+      var rows = queue.filter(function (q) { return q.dest === line; });
+      if (!rows.length && ROLE !== 'P4') return '';
+      if (!rows.length) return '<div class="q-line"><b>' + line + ' 0 位</b></div>';
+      return '<div class="q-line"><b>' + line + ' ' + rows.length + ' 位</b>' + rows.map(function (q) {
+        var name = q.who ? esc(q.who) + ' · ' : '';
+        var gave = q.serve ? '<span class="q-gave">已提供：' + esc(q.serve) + '</span>' : '';
+        return '<div class="qrow" data-qid="' + esc(q.id) + '"><span class="q-no">' + esc(q.no) + '</span><span class="q-item">' + name + esc(q.item) + '</span><span class="q-wait">' + esc(q.wait) + '</span><span class="q-to">' + esc(q.dest) + '</span>' + gave +
+          '<button type="button" class="q-btn" data-serve="' + esc(q.id) + '">提供服务</button><button type="button" class="q-btn" data-lobby="call">叫号</button></div>';
+      }).join('') + '</div>';
+    }).join('');
+    return html || '<p class="sub">当前无人等候</p>';
+  }
+  function syncWait(n) {
+    window.HALL_WAIT = n;
+    document.querySelectorAll('.js-wait').forEach(function (el) { el.textContent = n; });
+    var cc = $('ccAuth');
+    if (cc && cc.nextElementSibling && cc.nextElementSibling.textContent === '当前等候') cc.textContent = n;
+  }
+  function openTake() {
+    var box = $('p4dlg');
+    if (!box) openSeatText('', '');
+    box = $('p4dlg');
+    $('p4dlgT').textContent = '登记业务并取号';
+    $('p4dlgB').innerHTML = '<label>客户<input id="p4Who" /></label><label>要办的业务<select id="p4Item"><option>定期存款转存</option><option>寄递包裹</option><option>社保参保证明</option><option>活期转定期</option><option>理财赎回</option></select></label><p id="p4Line" class="sub"></p><button type="button" id="p4Take">取号入队</button>';
+    function showLine() {
+      var item = $('p4Item').value;
+      var fin = item.indexOf('寄') < 0 && item.indexOf('社保') < 0;
+      $('p4Line').textContent = '条线：' + (fin ? '代理金融' : '邮政营业') + '（按业务定，不用手选）';
     }
-    var tab = document.querySelector('[data-part="tab"]');
-    if (tab) home.appendChild(tab);
-    var perf = $('v10Perf');
-    if (perf) { perf.hidden = false; home.appendChild(perf); }
-    var rows = (DRILL.wait && DRILL.wait.rows) || [];
-    var bars = $('p4bars');
+    $('p4Item').onchange = showLine;
+    showLine();
+    $('p4Take').onclick = function () {
+      fetch('/api/lobby/take', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ role: ROLE, item: $('p4Item').value, who: $('p4Who').value }) })
+        .then(function (r) { return r.json(); })
+        .then(function (body) {
+          if (body && body.windows) { paintLobby(body); box.hidden = true; }
+        });
+    };
+    box.hidden = false;
+  }
+  function openServe(id) {
+    var opts = ['一杯水', '糖果零食', '厅堂微沙龙', '报刊阅览', '手机充电', '老花镜', '儿童安抚', '预约提醒卡'];
+    var box = $('p4dlg');
+    if (!box) openSeatText('', '');
+    box = $('p4dlg');
+    $('p4dlgT').textContent = '提供服务';
+    $('p4dlgB').innerHTML = opts.map(function (name) {
+      return '<label><input type="checkbox" value="' + name + '"> ' + name + '</label>';
+    }).join('<br>') + '<p><button type="button" id="p4Suggest">接手给模型出建议</button> <button type="button" id="p4Serve">提交</button></p>';
+    $('p4Suggest').onclick = function () {
+      var box0 = box.querySelector('input[value="一杯水"]');
+      if (box0) box0.checked = true;
+    };
+    $('p4Serve').onclick = function () {
+      var picks = [].map.call(box.querySelectorAll('input:checked'), function (el) { return el.value; });
+      fetch('/api/lobby/serve', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ role: ROLE, id: id, picks: picks }) })
+        .then(function (r) { return r.json(); })
+        .then(function (body) { if (body && body.queue) { paintLobby(body); box.hidden = true; } });
+    };
+    box.hidden = false;
+  }
+  function openSeatText(title, body) {
+    var box = $('p4dlg');
+    if (!box) {
+      box = document.createElement('div');
+      box.id = 'p4dlg';
+      box.innerHTML = '<div class="p4dlg-card"><b id="p4dlgT"></b><p id="p4dlgB"></p><button type="button" id="p4dlgX">关闭</button></div>';
+      document.body.appendChild(box);
+      box.addEventListener('click', function (ev) {
+        if (ev.target.id === 'p4dlg' || ev.target.id === 'p4dlgX') box.hidden = true;
+      });
+    }
+    $('p4dlgT').textContent = title;
+    $('p4dlgB').textContent = body;
+    box.hidden = false;
+  }
+  function openSeat(node) {
+    var lines = (node.innerText || '').split('\n').filter(Boolean);
+    openSeatText(lines[0] || '台席', lines.slice(1).join(' · '));
+  }
+  function svgUse(id, cls) {
+    return '<svg class="' + cls + '" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><use href="#' + id + '"/></svg>';
+  }
+  function paintLobby(floor) {
+    function card(w) {
+      return '<div class="win ' + (w.cls || '') + '" data-seat="' + esc(w.no) + '"><div class="w-h"><span class="w-no">' + esc(w.no) + '</span><span class="w-st">' + esc(w.st) + '</span></div>' +
+        (w.line ? '<div class="w-line">' + esc(w.line) + '</div>' : '') +
+        '<div class="w-who">' + esc(w.who || '—') + '</div><div class="w-t">' + esc(w.t || '') + '</div></div>';
+    }
+    var win = $('p4Win');
+    var kiosk = $('p4Kiosk');
+    if (win) win.innerHTML = (floor.windows || []).map(card).join('') || '<p class="sub">没有窗口</p>';
+    if (kiosk) kiosk.innerHTML = (floor.kiosks || []).map(card).join('') || '<p class="sub">没有自助机</p>';
+    var winN = $('p4WinN');
+    var kioskN = $('p4KioskN');
+    if (winN) winN.textContent = '· ' + (floor.windows || []).length + ' 个';
+    if (kioskN) kioskN.textContent = '· ' + (floor.kiosks || []).length + ' 台';
+    var queue = floor.queue || [];
+    var queueBox = $('p4Queue');
+    if (queueBox) queueBox.innerHTML = queueGroups(queue);
+    var own = $('ownQueue');
+    if (own) own.innerHTML = '<h3>本条线等候</h3>' + queueGroups(queue);
+    syncWait(floor.waiting != null ? floor.waiting : queue.length);
+    var callNo = $('p4CallNo');
+    var callItem = $('p4CallItem');
+    if (callNo) callNo.textContent = queue.length ? queue[0].no : '—';
+    if (callItem) callItem.textContent = queue.length ? ('当前叫号 · ' + queue[0].item) : '当前无人等候';
+    var appt = $('p4Appt');
+    if (appt) {
+      appt.innerHTML = (floor.appts || []).map(function (a) {
+        var act = a.st === '待进门' ? '确认' : (a.st === '未到店' ? '回电' : '');
+        return '<div class="arow ' + esc(a.cls || '') + '"><span class="a-t">' + esc(a.slot) + '</span><span class="a-who">' + esc(a.who) + '</span><span class="a-item">' + esc(a.item) + '</span><span class="a-st">' + esc(a.st) + '</span>' +
+          (act ? '<button type="button" class="q-btn" data-appt="' + esc(a.id) + '">' + act + '</button>' : '') + '</div>';
+      }).join('');
+    }
+    var title = $('p4BarTitle');
+    var sub = $('p4BarSub');
+    if (title && floor.barsTitle) title.textContent = floor.barsTitle;
+    if (sub && floor.barsSub) sub.textContent = floor.barsSub;
+    var bars = $('p4Bars');
     if (bars) {
-      bars.innerHTML = rows.length
-        ? '<table><tr><th>时段</th><th>取号数</th><th>平均等候</th><th>最长等候</th></tr>' +
-          rows.map(function (r) {
-            return '<tr><td>' + r[0] + '</td><td>' + r[1] + '</td><td>' + r[2] + '</td><td>' + r[3] + '</td></tr>';
-          }).join('') + '</table>'
-        : '当前无人等候';
+      var data = floor.bars || [];
+      var max = 1;
+      var nowH = new Date().getHours();
+      data.forEach(function (b) { if (b[1] > max) max = b[1]; });
+      bars.innerHTML = data.map(function (b) {
+        var pct = Math.round(b[1] / max * 100);
+        return '<div class="' + (b[0] === nowH ? 'bar-col now' : 'bar-col') + '"><span class="vl">' + (b[1] || '') + '</span><div class="bx" style="height:' + Math.max(pct, 3) + '%"></div><span class="lb">' + b[0] + ':00</span></div>';
+      }).join('');
     }
-    renderHall();
-    renderQueue();
-    renderAppt();
-    renderTablet();
-    renderClear();
+    var tab = $('p4Tab');
+    var note = $('p4TabNote');
+    var tablet = floor.tablet || {};
+    var icons = ['g-scan', 'g-seat', 'g-cal', 'g-flow'];
+    if (tab) {
+      tab.innerHTML = (tablet.acts || []).map(function (a, i) {
+        var ic = a.length > 2 ? a[0] : icons[i];
+        var name = a.length > 2 ? a[1] : a[0];
+        var desc = a.length > 2 ? a[2] : a[1];
+        return '<div class="tact">' + svgUse(ic, 'ic-sm') + '<div><div class="tt">' + esc(name) + '</div><div class="ts">' + esc(desc) + '</div></div></div>';
+      }).join('');
+    }
+    if (note) note.innerHTML = tablet.note || '';
   }
 
   /* 原型/05_普通柜员页.html L2664 · 09_大堂经理页.html L2874 同文 */
@@ -573,7 +768,7 @@
     var chTxt = Object.keys(chN).map(function(k){ return k + ' ' + chN[k]; }).join(' · ');
 
     if(isMine()){
-      $('pfLead').innerHTML = '这一页回答「<b>今天哪几位客户是我的、我促成了多少</b>」。' +
+      $('pfLead').innerHTML = offBanner() + '这一页回答「<b>今天哪几位客户是我的、我促成了多少</b>」。' +
         '只算<b>你名下</b>的 ' + list.length + ' 笔 —— 网点的整本账在支局经理那儿，不在这儿再算一遍。' +
         '大堂经理的业绩<b>记在客户身上</b>：走访出来的、电话唤醒的、厅堂转介来的，都算你的。' +
         '<span class="dim">客户只显示姓与尾号，全名在客户档案里。</span>';
@@ -583,8 +778,8 @@
         ? '其中 <b>' + mineL.length + ' 条</b>算到你头上（' +
           (mineL[0].u === 'piece' ? sumOf(mineL) + ' 件' : f1(sumOf(mineL)) + ' 万元') + '）。'
         : '今天这 ' + PERF.length + ' 条里<b>没有你经办的</b> —— 你在这页看的是全网点的账。';
-      $('pfLead').innerHTML = '这一页回答「<b>今天哪几笔算到我头上、确认到哪一步了</b>」。' + mineTxt +
-        '每笔的票池 = 能判定为本网点的在岗员工，去掉这一笔的经办人；经办人不在名单里就不减。角色空着的员工未计入。现在 ' + VOTERS.length + ' 人可投票。';
+      $('pfLead').innerHTML = offBanner() + '这一页回答「<b>今天哪几笔算到我头上、确认到哪一步了</b>」。' + mineTxt +
+        '每笔的票池 = 本网点在岗员工，去掉这一笔的经办人；经办人不在名单里就不减。无页面岗位默认同意。现在 ' + VOTERS.length + ' 人可投票。';
     }
 
     if(isMine()){
@@ -592,13 +787,17 @@
         box('我的客户单', list.length, '笔') +
         box('我促成金额', ml.length ? f1(totM) : '0.0', '万元' + (ml.length ? '' : ' · 本条线无')) +
         box('客户来源', Object.keys(chN).length, '种来源', '', chTxt || '—') +
-        box('确认进度', c.ok + '/' + list.length, '笔全票', (c.wait || c.draft) ? 'warn' : '');
+        (rosterOff()
+          ? box('票数', '—', '名册未接入', 'warn')
+          : box('确认进度', c.ok + '/' + list.length, '笔全票', (c.wait || c.draft) ? 'warn' : ''));
     } else {
       $('pfClearK').innerHTML =
         box('今日条数', PERF.length, '条') +
         box('代理金融', ml.length ? f1(totM) : '0.0', '万元' + (ml.length ? '' : ' · 本条线无')) +
         box('邮政营业', pl.length ? totP : 0, '件' + (pl.length ? '' : ' · 本条线无')) +
-        box('全票通过', c.ok, '条 / 待确认 ' + c.wait + (c.draft ? ' · 待核对 ' + c.draft : ''), c.wait ? 'warn' : '');
+        (rosterOff()
+          ? box('票数', '—', '名册未接入', 'warn')
+          : box('全票通过', c.ok, '条 / 待确认 ' + c.wait + (c.draft ? ' · 待核对 ' + c.draft : ''), c.wait ? 'warn' : ''));
     }
 
     $('pfClearCnt').textContent = isMine()
@@ -613,10 +812,10 @@
 
     $('pfClearList').innerHTML = head + list.map(function(r){
       var i = PERF.indexOf(r);
-      var st = ST[stOf(r)], need = needOf(r), got = votesOf(r).length;
+      var st = faceOf(r), need = needOf(r), got = votesOf(r).length;
       var act = '';
       if(r.draft && byOf(r) === meNo()){
-        act = '<button class="pf-btn" data-act="check" data-i="' + i + '">' + (isMine() ? '认领 · 核对无误' : '核对无误') + '</button>';
+        act = '<button class="pf-btn" data-act="check" data-i="' + i + '">查看</button>';
       } else if(r.draft){
         act = '<span class="dim">等本人核对</span>';
       } else if(stOf(r) === 'wait' && byOf(r) === meNo()){
@@ -625,6 +824,8 @@
         act = '<button class="pf-btn" data-act="vote" data-i="' + i + '">投通过</button>';
       } else if(stOf(r) === 'ok'){
         act = '<span class="dim">' + (r.rj && r.rj.length ? '' : '不可改 · 可结算') + '</span>';
+      } else if(stOf(r) === 'muted' || stOf(r) === 'no-roster'){
+        act = '<span class="dim">票数 —</span>';
       } else if(stOf(r) === 'wait'){
         var miss = pendingOf(r);
         act = '<span class="dim">我已投 · 还差 ' + miss.map(function (n) { return nameOf(n); }).join('、') + '</span>';
@@ -639,6 +840,7 @@
         : '<td class="num">' + (r.u === 'piece' ? r.a + '<span class="pf-unit">件</span>' : (r.q || 1) + '<span class="pf-unit">笔</span>') + '</td>' +
           '<td class="num">' + (r.u === 'piece' ? '—' : f1(r.a)) + '</td>' +
           '<td>' + src + '</td><td>' + nameOf(byOf(r)) + '</td>';
+      if (CHECK_I === i && r.chain) act += '<div class="dim">' + esc(r.chain) + '</div>';
       return '<tr><td class="num" style="text-align:left">' + r.t + '</td><td>' + r.k + '</td>' + mid +
         '<td><span class="pf-st ' + st[1] + '">' + st[0] + '</span></td>' +
         '<td>' + vbar(got, need, r.draft) + '</td><td>' + act + '</td></tr>';
@@ -666,15 +868,18 @@
     var mine = PERF.filter(function(r){ return byOf(r) === meNo() && stOf(r) === 'wait'; });
     var votable = PERF.filter(canVote);
 
-    $('pfConfirmLead').innerHTML = '这一页回答「<b>谁的钱还没凑齐全票</b>」。按人分栏，<b>每一笔</b>都能单独通过或驳回；' +
+    $('pfConfirmLead').innerHTML = offBanner() + '这一页回答「<b>谁的钱还没凑齐全票</b>」。按人分栏，<b>每一笔</b>都能单独通过或驳回；' +
       '<b>经办人不能投自己的票</b> —— 所以' + (mine.length ? '你的 ' + mine.length + ' 笔只能等别人' : '你没有待他人确认的业绩') + '。' +
       '「一键确认」只投<b>你还没投的</b>那几笔，不会替别人投票。';
 
     $('pfConfirmList').innerHTML = order.map(function(who){
       var list = by[who];
       var c = counts(list);
-      var stTxt = [c.ok ? '全票通过 ' + c.ok : '', c.wait ? '待确认 ' + c.wait : '',
-                   c.draft ? '待本人核对 ' + c.draft : '', c.rej ? '已驳回 ' + c.rej : ''].filter(Boolean).join(' · ');
+      var stTxt = [
+        rosterOff() ? '票数 —' : (c.ok ? '全票通过 ' + c.ok : ''),
+        c.wait ? '待确认 ' + c.wait : '',
+        c.draft ? '待本人核对 ' + c.draft : '', c.rej ? '已驳回 ' + c.rej : ''
+      ].filter(Boolean).join(' · ');
       var myVotable = list.filter(canVote).length;
       var btns = '';
       if(who !== meNo() && myVotable){
@@ -690,7 +895,7 @@
         '<table><tr><th>时间</th><th>种类</th><th class="num">数量</th><th class="num">金额</th><th>来源</th>' +
         '<th>状态</th><th>票数</th><th style="text-align:right">逐笔</th></tr>' +
         list.map(function(r){
-          var i = PERF.indexOf(r), st = ST[stOf(r)], got = votesOf(r).length, need = needOf(r);
+          var i = PERF.indexOf(r), st = faceOf(r), got = votesOf(r).length, need = needOf(r);
           var act = '';
           if(canVote(r)){
             act = '<span class="pf-act"><button class="ok" data-act="vote" data-i="' + i + '">通过</button>' +
@@ -700,12 +905,14 @@
                 return '<button type="button" data-act="rejWhy" data-i="' + i + '" data-why="' + w + '">' + w + '</button>';
               }).join(' ') + '</div>';
             }
-          } else if(byOf(r) === meNo()){ act = '<span class="dim">本人不能投</span>'; }
-          else if(rejsOf(r).length){ act = '<span class="dim">已驳回 · 待经办人更正 · ' + esc(rejsOf(r)[0].why) + '</span>'; }
-          else if(stOf(r) === 'ok'){ act = '<span class="dim">已齐</span>'; }
+          act += ' ' + proxyBtns(r, i);
+          } else if(byOf(r) === meNo()){ act = '<span class="dim">本人不能投</span> ' + proxyBtns(r, i); }
+          else if(rejsOf(r).length){ act = '<span class="dim">已驳回 · 待经办人更正 · ' + esc(rejsOf(r)[0].why) + '</span> ' + proxyBtns(r, i); }
+          else if(stOf(r) === 'ok'){ act = '<span class="dim">已齐</span> ' + proxyBtns(r, i); }
+          else if(stOf(r) === 'muted' || stOf(r) === 'no-roster'){ act = '<span class="dim">票数 —</span>'; }
           else if(stOf(r) === 'wait'){
             var miss = pendingOf(r);
-            act = '<span class="dim">我已投 · 还差 ' + miss.map(function (n) { return nameOf(n); }).join('、') + '</span>';
+            act = '<span class="dim">我已投 · 还差 ' + miss.map(function (n) { return nameOf(n); }).join('、') + '</span> ' + proxyBtns(r, i);
           }
           return '<tr><td style="text-align:left">' + r.t + '</td><td>' + r.k + '</td>' +
             '<td class="num">' + (r.u === 'piece' ? r.a : (r.q || 1)) + '<span class="pf-unit">' + (r.u === 'piece' ? '件' : '笔') + '</span></td>' +
@@ -716,12 +923,14 @@
         }).join('') + '</table></div>';
     }).join('');
 
-    $('pfConfirmNote').innerHTML = '⭐ <b>全票才算完成</b>：能判定为本网点、且在岗的员工才投票，现在 ' + VOTERS.length +
-      ' 人。非本网点角色不参与。角色空着的员工，网点归属判不了，未计入票池。每一笔的票池 = 这 ' + VOTERS.length +
-      ' 人去掉这一笔的经办人；经办人不在名单里，这一笔就是 ' + VOTERS.length + ' 票，不减。<b>缺一票都不算</b>。无页面岗位若已能判定归属，按后台默认同意计票，格子写「已投 · 默认同意」。<br>' +
+    $('pfConfirmNote').innerHTML = rosterOff()
+      ? '名册未接入 · 当前是演示数据。票数停在 —，这里没有通过结论。'
+      : ('⭐ <b>全票才算完成</b>：本网点在岗员工才投票，现在 ' + VOTERS.length +
+      ' 人。非本网点不参与。每一笔的票池 = 这 ' + VOTERS.length +
+      ' 人去掉这一笔的经办人；经办人不在名单里，这一笔就是 ' + VOTERS.length + ' 票，不减。<b>缺一票都不算</b>。无页面且在岗的，格子写「已投 · 默认同意」，计入这 ' + VOTERS.length + ' 人。点「代确认」才是人点进去的。<br>' +
       '⭐ <b>驳回不删除记录</b>：原数保留、标记「已驳回」、理由随业绩留痕，经办人更正后重新提交；' +
       '合计数不会因为驳回而消失，但「能否结算」会变。<br>' +
-      '⭐ 一键确认 = <b>你一个人</b>把还没投的笔投一遍，不是替全网点点头。';
+      '⭐ 一键确认 = <b>你一个人</b>把还没投的笔投一遍，不是替全网点点头。');
 
     $('pfAllN').textContent = votable.length ? ' · ' + votable.length + ' 笔' : '';
     $('pfAll').disabled = !votable.length;
@@ -747,7 +956,7 @@
       box('最长挂账', maxDay, '天', maxDay > 1 ? 'warn' : '') +
       box('今日待清算', risk.length, '笔', risk.length ? 'warn' : '');
 
-    var h = '<div class="pf-sec">前日遗留<span class="dim">已过日终 · 共 ' + DEAD.length + ' 笔</span><span class="ln"></span></div>' +
+    var h = offBanner() + '<div class="pf-sec">前日遗留<span class="dim">已过日终 · 共 ' + DEAD.length + ' 笔</span><span class="ln"></span></div>' +
       '<table class="pf-dt"><tr><th>起账日</th><th>时间</th><th>经办</th><th>种类</th><th class="num">金额（万元）</th>' +
       '<th>死账原因</th><th>票数 / 差谁</th><th class="num">挂账</th><th style="text-align:right">处理</th></tr>' +
       DEAD.map(function(d, i){
@@ -769,14 +978,18 @@
           ? '<span class="dim">' + esc(d.at || '') + ' · ' + esc(d.why ? d.why.slice(0, 12) + '…' : '') + '</span>'
           : '<span class="pf-act">' +
             '<button class="ok" data-act="rerun" data-i="' + i + '">重新发起重投</button>' +
-            '<button data-act="dc" data-i="' + i + '" data-way="裁定入账">裁定</button>' +
-            '<button class="no" data-act="dc" data-i="' + i + '" data-way="退回经办人更正">退回</button></span>';
+            '<button data-act="dc" data-i="' + i + '">裁定</button>' +
+            '<button data-act="check" data-dead="' + i + '">查看</button></span>' +
+            (DC_I === i
+              ? '<div><button type="button" data-act="dcPick" data-i="' + i + '" data-way="通过">通过</button> ' +
+                '<button type="button" data-act="dcPick" data-i="' + i + '" data-way="退回">退回</button></div>'
+              : '');
         return '<tr><td style="text-align:left">' + d.day.slice(5) + tag + '</td>' +
           '<td class="num" style="text-align:left">' + d.t + '</td><td>' + d.by + '</td><td>' + d.k + '</td>' +
           '<td class="num">' + f1(d.a) + '</td>' +
           '<td class="dim" style="max-width:210px;line-height:1.5">' + esc(d.note) + '</td>' +
-          '<td><span class="pf-vt' + (d.done ? '' : ' bad') + '"><b>' + d.got + '</b>/' + d.need + '</span> ' + missTxt + '</td>' +
-          '<td class="num">' + (d.done ? '—' : deadDays(d) + ' 天') + '</td><td style="text-align:right">' + act + '</td></tr>';
+          '<td>' + (rosterOff() ? '<span class="pf-vt">票数 —</span>' : ('<span class="pf-vt' + (d.done ? '' : ' bad') + '"><b>' + d.got + '</b>/' + d.need + '</span> ' + missTxt)) + '</td>' +
+          '<td class="num">' + (d.done ? '—' : deadDays(d) + ' 天') + '</td><td style="text-align:right">' + act + deadTrail(d, i) + '</td></tr>';
       }).join('') + '</table>';
 
     h += '<div class="pf-sec" style="margin-top:14px">今日待清算' +
@@ -790,15 +1003,15 @@
           return '<tr><td class="num" style="text-align:left">' + r.t + '</td><td>' + nameOf(byOf(r)) + '</td><td>' + r.k + '</td>' +
             '<td class="num">' + (r.u === 'piece' ? '—' : f1(r.a)) + '</td>' +
             '<td class="dim">' + stuck + '</td>' +
-            '<td><span class="pf-vt bad"><b>' + got + '</b>/' + need + '</span></td>' +
-            '<td style="text-align:right"><button class="pf-btn" data-act="urge" data-i="' + PERF.indexOf(r) + '">催一下</button></td></tr>';
+            '<td>' + (rosterOff() ? '<span class="pf-vt">票数 —</span>' : '<span class="pf-vt bad"><b>' + got + '</b>/' + need + '</span>') + '</td>' +
+            '<td style="text-align:right"><button class="pf-btn" data-act="urge" data-i="' + PERF.indexOf(r) + '">催一下</button>' + urgeTrail(r) + '</td></tr>';
         }).join('') + '</table>';
     } else {
       h += '<div class="pf-empty">今天没有卡住的笔 —— 18:00 清算时不会新增死账。</div>';
     }
     $('pfDeadList').innerHTML = h;
 
-    $('pfDeadNote').innerHTML = '⭐ <b>死账不是作废</b>：钱已经发生了，只是没人点头。出口只有三个 —— ' +
+    $('pfDeadNote').innerHTML = offBanner() + '⭐ <b>死账不是作废</b>：钱已经发生了，只是没人点头。出口只有三个 —— ' +
       '<b>重投</b>（重新凑票）、<b>裁定</b>（你担责，写理由）、<b>退回更正</b>（改数重报）；三个都要留痕。<br>' +
       '⭐ <b>日终不清算，次日区办公室按日通报</b>：所以这条死账同时是今天的一条待办，处理完才从待办里消失 —— ' +
       '它不会自己好。<br>' +
@@ -864,6 +1077,7 @@
     var body = d.lead ? '<div class="dr-lead">' + d.lead + '</div>' : '';
     if(d.kpi && d.kpi.length){
       body += '<div class="dr-k">' + d.kpi.map(function(b){
+        if (b[0] === '当前等候') b = ['当前等候', window.HALL_WAIT == null ? '—' : String(window.HALL_WAIT), b[2]];
         return '<div class="box"><div class="t">' + b[0] + '</div><div class="v">' + b[1] +
                (b[2] ? '<u>' + b[2] + '</u>' : '') + '</div></div>';
       }).join('') + '</div>';
@@ -1013,7 +1227,7 @@
     if (!document.getElementById('hallViewCss')) {
       var css = document.createElement('style');
       css.id = 'hallViewCss';
-      css.textContent = '#v10ViewBar{display:flex;flex-wrap:wrap;gap:8px;margin:8px 0}#v10ViewBar button{height:32px;padding:0 12px;border-radius:8px;border:1px solid #d5ddd8;background:#fff;font-size:13px}#v10ViewBar button.on{background:#e7f3ec;border-color:#9dccb4}#v10Drawer{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:0 0 8px 14px;padding:4px 0 4px 10px;border-left:2px solid #9dccb4}#v10Drawer[hidden]{display:none}#v10Drawer .cap{font-size:12px;color:#5d6a64;margin-right:4px}#v10Drawer button{height:26px;padding:0 10px;border-radius:6px;border:1px solid #e3ebe6;background:#f7faf8;font-size:12px}#v10Drawer button.on{background:#e7f3ec;border-color:#9dccb4}#v10Hall h4{margin:12px 0 6px;font-size:13px;font-weight:600}#v10View{background:#fff;border:1px solid #e3ebe6;border-radius:12px;padding:12px;margin-bottom:12px}#v10View table{width:100%;border-collapse:collapse;font-size:13px}#v10View th,#v10View td{border-bottom:1px solid #eef2ef;padding:6px 8px;text-align:left}.kpi[data-drill]{cursor:pointer} .dr-mask{position:fixed;inset:0;background:rgba(16,24,20,.42);display:none;z-index:80} .dr-mask.on{display:block} .dr-modal{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);width:min(800px,93vw); max-height:84vh;display:none;flex-direction:column;background:#fff;border-radius:14px; box-shadow:0 26px 64px rgba(10,22,16,.30);z-index:81;overflow:hidden; font-family:inherit;color:var(--t1);text-align:left;padding:0} .dr-modal.on{display:flex} .dr-modal .dr-h{display:flex;align-items:center;gap:9px;padding:14px 18px;border-bottom:1px solid var(--bd-s)} .dr-modal .dr-h .ic-xs{width:14px;height:14px;color:var(--pg);flex:none} .dr-modal .dr-h b{font-size:14.5px;font-weight:600} .dr-modal .dr-h .sp{flex:1} .dr-modal .dr-h .mini{font-size:11.5px;color:var(--t3)} .dr-modal .dr-b{overflow:auto;padding:0 0 8px} .dr-modal .dr-f{display:flex;justify-content:flex-end;gap:9px;padding:11px 18px;border-top:1px solid var(--bd-s);background:#fafcfb} .dr-modal .dr-f button{padding:7px 15px;border-radius:9px;border:1px solid var(--bd-s);background:#fff;font-size:12.5px;cursor:pointer;color:var(--t2);font-family:inherit} .dr-modal .dr-f button.pri{background:var(--pg);border-color:var(--pg);color:#fff} .dr-modal .dr-k{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;padding:14px 18px 4px} .dr-modal .dr-k .box{border:1px solid var(--bd-s);border-radius:10px;padding:10px 13px;background:#fdfefe} .dr-modal .dr-k .box .t{font-size:11.5px;color:var(--t3)} .dr-modal .dr-k .box .v{font-size:19px;color:var(--pg-d);margin-top:4px} .dr-modal .dr-k .box .v u{font-size:11.5px;text-decoration:none;color:var(--t3);margin-left:3px} .dr-modal table{width:100%;border-collapse:collapse;font-size:12.5px} .dr-modal th{background:#f6f9f7;color:var(--t3);font-weight:500;text-align:left;padding:9px 10px;border-bottom:1px solid var(--bd-s);position:sticky;top:0;z-index:1} .dr-modal td{padding:10px;border-bottom:1px solid var(--bd-s);vertical-align:top} .dr-modal tr:last-child td{border-bottom:0} .dr-modal .mono{font-variant-numeric:tabular-nums} .dr-modal .dim{color:var(--t3);font-size:11.5px} .dr-modal .dr-st{display:inline-block;padding:1px 8px;border-radius:20px;font-size:11px;white-space:nowrap} .dr-modal .dr-st-ok{background:#e8f4ee;color:#1f7a4d} .dr-modal .dr-st-wait{background:#fdf2e4;color:#b8621b} .dr-modal .dr-lead{padding:11px 18px 2px;font-size:12px;color:#5d6a64;line-height:1.75} .dr-modal .dr-lead b{color:#1d2a25} .dr-modal .dr-note{padding:10px 18px 6px;font-size:11.5px;color:var(--t3);line-height:1.7} .dr-modal .dr-empty{padding:30px 18px;text-align:center;color:var(--t3);font-size:12.5px}.bx-mk{display:none;position:fixed;inset:0;background:rgba(10,26,18,.35);z-index:82}.bx-mk.on{display:flex;align-items:flex-start;justify-content:center;padding-top:10vh}.bx-dlg{background:#fff;border-radius:14px;width:min(640px,92vw);padding:14px}#pfMeetPool{display:flex;flex-wrap:wrap;gap:8px;margin:8px 0}#pfMeetPool button{min-width:72px;padding:8px;border:1px solid #d5ddd8;border-radius:8px;background:#fff}#pfMeetPool button.on{outline:2px solid #1f7a4d}#pfMeetPool button.mt-def{background:#e8eefc;border:2px solid #2f5fbf}#pfMeetPool button.mt-ok{background:#e5f6ea;border:2px solid #1f8a4c}#pfMeetPool button.mt-proxy{background:#fff4e0;border:2px dashed #e07a00}#pfMeetPool button.mt-wait{background:#fff;border:2px dotted #5d6a64}#pfMeetPool button.mt-absent{background:#fde8e8;border:2px solid #b42318;color:#8a1c14}.mt-self{flex-basis:100%;color:#5d6a64;margin-top:6px}.meet-why{color:#8a1c14;font-weight:600}.till-err{color:#b42318;font-weight:600}';
+      css.textContent = '.greetcard .quickrow,#p4home .quickrow{display:flex;gap:9px;margin-top:12px}.greetcard .qbtn,#p4home .qbtn{flex:1 1 0%;height:96px;background:#fff;border:1px solid var(--bd);border-radius:12px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:7px;font-size:12px;color:var(--t2);padding:12px 6px;box-sizing:border-box}.greetcard .qbtn .ic,#p4home .qbtn .ic{width:21px;height:21px;color:var(--pg)}#p4dlg{position:fixed;inset:0;background:rgba(20,28,24,.35);z-index:80;display:flex;align-items:center;justify-content:center}#p4dlg[hidden]{display:none}#p4dlg .p4dlg-card{width:min(420px,90vw);background:#fff;border-radius:14px;padding:16px 18px}#p4dlg p{font-size:13px;line-height:1.7;margin:8px 0 12px}#p4home .win{cursor:pointer}#p4home .hcol-t span{font-size:11px;color:var(--t3);margin-left:4px}#p4home .block{background:#fff;border:1px solid var(--bd);border-radius:14px;padding:15px 17px;margin:0 0 14px}#p4home .blk-h{display:flex;align-items:baseline;gap:10px;margin-bottom:13px}#p4home .blk-h h3{font-size:13.5px;font-weight:500}#p4home .blk-h .sub{font-size:11.5px;color:var(--t3)}#p4home .blk-h .sp{flex:1}#p4home .hallcols{display:grid;grid-template-columns:1fr 1fr;gap:18px}#p4home .hcol-t{font-size:12px;color:var(--t2);margin-bottom:9px}#p4home .hallgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px}#p4home .win{border:1px solid var(--bd-s);border-radius:11px;padding:11px 12px;background:#fdfefe;border-left:3px solid var(--bd)}#p4home .win.busy{border-left-color:var(--pg);background:linear-gradient(180deg,#f4faf7,#fff)}#p4home .win.free{border-left-color:#22a06b}#p4home .win.off{border-left-color:#c8ccd2;background:#f7f8fa;opacity:.72}#p4home .w-h{display:flex;align-items:center;justify-content:space-between;gap:8px}#p4home .w-no{font-size:12.5px;font-weight:500}#p4home .w-st{font-size:10.5px;padding:1px 7px;border-radius:8px;background:var(--pg-l);color:var(--pg-d)}#p4home .win.free .w-st{background:#e8f7f0;color:#1a7f5a}#p4home .win.off .w-st{background:#eceef1;color:var(--t3)}#p4home .w-line{font-size:11px;color:var(--t3);margin-top:5px}#p4home .w-who{font-size:11.5px;margin-top:7px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}#p4home .w-t{font-size:10.5px;color:var(--t3);margin-top:3px}#p4home .pill-live{font-size:10.5px;color:var(--pg);background:var(--pg-l);border-radius:9px;padding:2px 9px;display:flex;align-items:center;gap:5px}#p4home .pill-live i{width:5px;height:5px;border-radius:50%;background:var(--pg)}#p4home .qlist,#p4home .alist{display:flex;flex-direction:column;gap:7px}#p4home .qrow,#p4home .arow{display:flex;align-items:center;gap:12px;padding:9px 12px;border:1px solid var(--bd-s);border-radius:9px;background:#fdfefe;font-size:12px}#p4home .q-no{font-weight:500;color:var(--pg-d);min-width:52px}#p4home .q-item{flex:1;min-width:0}#p4home .q-wait{font-size:11px;color:var(--t3);min-width:70px}#p4home .q-to{font-size:11px;color:var(--t2);background:#f1f2f4;border-radius:8px;padding:2px 9px}#p4home .q-btn{font-size:11px;color:var(--pg-d);border:1px solid var(--pg-l2);background:var(--pg-l);border-radius:7px;padding:3px 11px}#p4home .a-t{font-weight:500;min-width:48px}#p4home .a-who{min-width:64px}#p4home .a-item{flex:1;color:var(--t2)}#p4home .a-st{font-size:10.5px;border-radius:8px;padding:2px 9px;background:#f1f2f4;color:var(--t2)}#p4home .arow.ok .a-st{background:#effaf5;color:#1a7f5a}#p4home .arow.wait .a-st{background:#eef4ff;color:#2b6cb0}#p4home .arow.warn .a-st{background:#fdf6f2;color:#b35309}#p4home .bars{display:flex;align-items:flex-end;gap:9px;height:112px;padding-top:6px}#p4home .bar-col{flex:1;display:flex;flex-direction:column;align-items:center;gap:6px;height:100%;justify-content:flex-end}#p4home .bar-col .bx{width:100%;max-width:34px;border-radius:5px 5px 0 0;background:#d9e9e1}#p4home .bar-col.now .bx{background:var(--pg)}#p4home .bar-col .lb,#p4home .bar-col .vl{font-size:10.5px;color:var(--t3)}#p4home .bar-col.now .lb{color:var(--pg);font-weight:500}#p4home .tabletwrap{display:flex;gap:18px;align-items:flex-start}#p4home .tablet{flex:none;width:340px;border:9px solid #2b3038;border-radius:20px;background:#2b3038;box-shadow:0 6px 20px rgba(0,0,0,.16)}#p4home .tab-cam{height:14px;position:relative}#p4home .tab-cam::after{content:"";position:absolute;left:50%;top:3px;width:5px;height:5px;border-radius:50%;background:#4a5058;transform:translateX(-50%)}#p4home .tab-scr{background:#fff;border-radius:11px;padding:11px 12px 13px}#p4home .tab-top{display:flex;align-items:center;justify-content:space-between;font-size:11px;color:var(--t2);padding-bottom:9px;border-bottom:1px solid var(--bd-s)}#p4home .tab-live{display:flex;align-items:center;gap:5px;color:var(--pg);font-size:10.5px}#p4home .tab-live i{width:5px;height:5px;border-radius:50%;background:#22a06b}#p4home .tab-id{display:flex;align-items:center;gap:10px;margin:11px 0;padding:10px 11px;background:var(--pg-l);border:1px solid var(--pg-l2);border-radius:10px}#p4home .tid-i{width:30px;height:30px;border-radius:8px;background:var(--pg);color:#fff;display:grid;place-items:center;font-size:13px}#p4home .tid-t{font-size:12.5px;color:var(--pg-d);font-weight:500}#p4home .tid-s{font-size:10.5px;color:var(--t2);margin-top:2px}#p4home .tab-acts{display:grid;grid-template-columns:1fr 1fr;gap:8px}#p4home .tact{display:flex;gap:8px;padding:9px 10px;border:1px solid var(--bd-s);border-radius:9px}#p4home .tact .ic-sm{width:16px;height:16px;color:var(--pg);flex:none}#p4home .tact .tt{font-size:12px}#p4home .tact .ts{font-size:10px;color:var(--t3);margin-top:2px;line-height:1.45}#p4home .tab-call{display:flex;align-items:center;gap:9px;margin-top:11px;padding:9px 11px;background:#f6f7f9;border-radius:10px}#p4home .tc-no{font-size:16px;font-weight:500;color:var(--pg-d)}#p4home .tc-t{flex:1;font-size:10.5px;color:var(--t2)}#p4home .tc-go{font-size:11px;color:#fff;background:var(--pg);border-radius:7px;padding:3px 11px}#p4home .tab-note{flex:1;font-size:12px;line-height:1.85;color:var(--t2);border-left:2px solid var(--pg-l2);padding-left:13px}#v10View{flex:1;min-height:0;overflow:auto}#pfClearK,#pfDeadK{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin:8px 0}#v10View .box{border:1px solid #e6ece9;border-radius:10px;padding:8px 10px;background:#fff}#v10View .box .t{font-size:12px;color:#5d6a64}#v10View .box .v{font-size:18px;color:#00693e;font-variant-numeric:tabular-nums}#v10View .box .v.warn{color:#b8621b}#v10View th,#v10View td{white-space:nowrap}#v10ViewBar{display:flex;flex-wrap:wrap;gap:8px;margin:8px 0}#v10ViewBar button{height:32px;padding:0 12px;border-radius:8px;border:1px solid #d5ddd8;background:#fff;font-size:13px}#v10ViewBar button.on{background:#e7f3ec;border-color:#9dccb4}#v10Drawer{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:0 0 8px 14px;padding:4px 0 4px 10px;border-left:2px solid #9dccb4}#v10Drawer[hidden]{display:none}#v10Drawer .cap{font-size:12px;color:#5d6a64;margin-right:4px}#v10Drawer button{height:26px;padding:0 10px;border-radius:6px;border:1px solid #e3ebe6;background:#f7faf8;font-size:12px}#v10Drawer button.on{background:#e7f3ec;border-color:#9dccb4}#v10Hall h4{margin:12px 0 6px;font-size:13px;font-weight:600}#v10View{background:#fff;border:1px solid #e3ebe6;border-radius:12px;padding:12px;margin-bottom:12px}#v10View table{width:100%;border-collapse:collapse;font-size:13px}#v10View th,#v10View td{border-bottom:1px solid #eef2ef;padding:6px 8px;text-align:left}.kpi[data-drill]{cursor:pointer} .dr-mask{position:fixed;inset:0;background:rgba(16,24,20,.42);display:none;z-index:80} .dr-mask.on{display:block} .dr-modal{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);width:min(800px,93vw); max-height:84vh;display:none;flex-direction:column;background:#fff;border-radius:14px; box-shadow:0 26px 64px rgba(10,22,16,.30);z-index:81;overflow:hidden; font-family:inherit;color:var(--t1);text-align:left;padding:0} .dr-modal.on{display:flex} .dr-modal .dr-h{display:flex;align-items:center;gap:9px;padding:14px 18px;border-bottom:1px solid var(--bd-s)} .dr-modal .dr-h .ic-xs{width:14px;height:14px;color:var(--pg);flex:none} .dr-modal .dr-h b{font-size:14.5px;font-weight:600} .dr-modal .dr-h .sp{flex:1} .dr-modal .dr-h .mini{font-size:11.5px;color:var(--t3)} .dr-modal .dr-b{overflow:auto;padding:0 0 8px} .dr-modal .dr-f{display:flex;justify-content:flex-end;gap:9px;padding:11px 18px;border-top:1px solid var(--bd-s);background:#fafcfb} .dr-modal .dr-f button{padding:7px 15px;border-radius:9px;border:1px solid var(--bd-s);background:#fff;font-size:12.5px;cursor:pointer;color:var(--t2);font-family:inherit} .dr-modal .dr-f button.pri{background:var(--pg);border-color:var(--pg);color:#fff} .dr-modal .dr-k{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;padding:14px 18px 4px} .dr-modal .dr-k .box{border:1px solid var(--bd-s);border-radius:10px;padding:10px 13px;background:#fdfefe} .dr-modal .dr-k .box .t{font-size:11.5px;color:var(--t3)} .dr-modal .dr-k .box .v{font-size:19px;color:var(--pg-d);margin-top:4px} .dr-modal .dr-k .box .v u{font-size:11.5px;text-decoration:none;color:var(--t3);margin-left:3px} .dr-modal table{width:100%;border-collapse:collapse;font-size:12.5px} .dr-modal th{background:#f6f9f7;color:var(--t3);font-weight:500;text-align:left;padding:9px 10px;border-bottom:1px solid var(--bd-s);position:sticky;top:0;z-index:1} .dr-modal td{padding:10px;border-bottom:1px solid var(--bd-s);vertical-align:top} .dr-modal tr:last-child td{border-bottom:0} .dr-modal .mono{font-variant-numeric:tabular-nums} .dr-modal .dim{color:var(--t3);font-size:11.5px} .dr-modal .dr-st{display:inline-block;padding:1px 8px;border-radius:20px;font-size:11px;white-space:nowrap} .dr-modal .dr-st-ok{background:#e8f4ee;color:#1f7a4d} .dr-modal .dr-st-wait{background:#fdf2e4;color:#b8621b} .dr-modal .dr-lead{padding:11px 18px 2px;font-size:12px;color:#5d6a64;line-height:1.75} .dr-modal .dr-lead b{color:#1d2a25} .dr-modal .dr-note{padding:10px 18px 6px;font-size:11.5px;color:var(--t3);line-height:1.7} .dr-modal .dr-empty{padding:30px 18px;text-align:center;color:var(--t3);font-size:12.5px}.bx-mk{display:none;position:fixed;inset:0;background:rgba(10,26,18,.35);z-index:82}.bx-mk.on{display:flex;align-items:flex-start;justify-content:center;padding-top:10vh}.bx-dlg{background:#fff;border-radius:14px;width:min(640px,92vw);padding:14px}#pfMeetPool{display:flex;flex-wrap:wrap;gap:8px;margin:8px 0}#pfMeetPool button{min-width:72px;padding:8px;border:1px solid #d5ddd8;border-radius:8px;background:#fff}#pfMeetPool button.on{outline:2px solid #1f7a4d}#pfMeetPool button.mt-def{background:#e8eefc;border:2px solid #2f5fbf}#pfMeetPool button.mt-ok{background:#e5f6ea;border:2px solid #1f8a4c}#pfMeetPool button.mt-proxy{background:#fff4e0;border:2px dashed #e07a00}#pfMeetPool button.mt-wait{background:#fff;border:2px dotted #5d6a64}#pfMeetPool button.mt-absent{background:#fde8e8;border:2px solid #b42318;color:#8a1c14}.mt-self{flex-basis:100%;color:#5d6a64;margin-top:6px}.meet-why{color:#8a1c14;font-weight:600}.till-err{color:#b42318;font-weight:600}';
       document.head.appendChild(css);
     }
   }
@@ -1262,6 +1476,100 @@
   var MEET_FOR = '';
   var MEET_SUM = '';
   var REJ_I = -1;
+  var DC_I = -1;
+  var CHECK_I = -1;
+  var CHECK_DEAD = -1;
+  function proxyBtns(r, i) {
+    if (rosterOff() || r.draft) return '';
+    return poolOf(r).filter(agreeNo).map(function (n) {
+      var p = (r.proxy || []).filter(function (x) { return x.forNo === n && x.mode === '后台代确认'; })[0];
+      return '<button type="button" class="pf-btn" data-act="proxyNo" data-i="' + i + '" data-no="' + n + '">' +
+        (p ? '已代' : '代确认') + ' · ' + nameOf(n) + '</button>';
+    }).join(' ');
+  }
+  function deadTrail(d, i) {
+    var bits = [];
+    (d.rerunLog || []).forEach(function (x) {
+      bits.push('重投记录 · ' + nameOf(x.who) + ' · ' + x.at + ' · 第 ' + x.nth + ' 次 · ' + x.step);
+    });
+    (d.dcLog || []).forEach(function (x) {
+      bits.push('裁定记录 · ' + nameOf(x.who) + ' · ' + x.at + ' · ' + x.conclusion + ' · ' + x.why);
+    });
+    if (CHECK_DEAD === i && d.chain) bits.push(d.chain);
+    return bits.length ? '<div class="dim">' + bits.join('<br>') + '</div>' : '';
+  }
+  function urgeTrail(r) {
+    var bits = (r.urgeLog || []).map(function (x) {
+      return '催办记录 · ' + nameOf(x.who) + ' · 给 ' + x.to + ' · ' + x.at;
+    });
+    if (r.urgeHold) bits.push(r.urgeHold);
+    return bits.length ? '<div class="dim">' + bits.join('<br>') + '</div>' : '';
+  }
+  function doRerun(i) {
+    var d = DEAD[i];
+    if (!d || d.done) return;
+    d.rerunLog = d.rerunLog || [];
+    d.rnd = (d.rnd || 1) + 1;
+    d.phase = '重投中';
+    d.rerunLog.push({ who: meNo(), at: hm(), nth: d.rerunLog.length + 1, step: '重投中', conclusion: '重投' });
+    renderDead();
+  }
+  function doDcOpen(i) { DC_I = i; renderDead(); }
+  function doDcPick(i, way) {
+    var d = DEAD[i];
+    if (!d) return;
+    d.dcLog = d.dcLog || [];
+    d.dcLog.push({
+      who: meNo(), at: hm(), conclusion: way,
+      why: way === '通过' ? '裁定入账' : '退回经办人更正', step: '已裁定'
+    });
+    DC_I = -1;
+    renderDead();
+  }
+  function doUrge(i) {
+    var r = PERF[i];
+    if (!r) return;
+    var now = Date.now();
+    var log = r.urgeLog || [];
+    var last = log[log.length - 1];
+    if (last && now - last.ts < 300000) r.urgeHold = '同一笔 5 分钟内不许重复催';
+    else {
+      r.urgeHold = '';
+      r.urgeLog = log;
+      r.urgeLog.push({
+        who: meNo(), to: pendingOf(r).map(nameOf).join('、') || '待表态的人',
+        at: hm(), ts: now, conclusion: '催办'
+      });
+    }
+    renderDead();
+  }
+  function doCheckDead(i) {
+    var d = DEAD[i];
+    if (!d) return;
+    CHECK_DEAD = i;
+    d.chain = '依据链 · 起账 ' + d.day + ' ' + d.t + ' · 经办 ' + d.by + ' · ' + d.k + ' · ' + f1(d.a) + ' 万元 · ' + d.note;
+    renderDead();
+  }
+  function doCheckRow(i) {
+    var r = PERF[i];
+    if (!r) return;
+    CHECK_I = i;
+    r.chain = '依据链 · ' + r.t + ' · ' + r.k + ' · ' + f1(r.a) + (r.u === 'piece' ? ' 件' : ' 万元') +
+      ' · 经办 ' + nameOf(byOf(r)) + '（' + byOf(r) + '）· 来源 ' + (r.src || '手工') +
+      (r.cl ? ' · 客户 ' + r.cl : '') + (r.ch ? ' · ' + r.ch : '');
+    renderClear();
+  }
+  function doProxy(i, no) {
+    var r = PERF[i];
+    if (!r || !agreeNo(no) || byOf(r) === no) return;
+    if (votesOf(r).indexOf(no) < 0) votesOf(r).push(no);
+    r.proxy = r.proxy || [];
+    if (!r.proxy.some(function (p) { return p.forNo === no && p.mode === '后台代确认'; })) {
+      r.proxy.push({ forNo: no, byNo: meNo(), at: hm(), mode: '后台代确认', signed: false, conclusion: '代' });
+    }
+    saveVotes();
+    renderConfirm();
+  }
   function proxyOf(r, no) {
     return (r.proxy || []).filter(function (p) { return p.forNo === no; })[0];
   }
@@ -1273,9 +1581,14 @@
     var r = list[MEET_I];
     var pool = VOTERS.filter(function (n) { return n !== byOf(r); });
     $('pfMeetHead').textContent = '清分会议　第 ' + (MEET_I + 1) + ' / ' + list.length + ' 笔';
+    var strip = PERF.map(function (x) {
+      var f = faceOf(x);
+      return '<span class="pf-st ' + f[1] + '">' + x.t + ' ' + f[0] + '</span>';
+    }).join(' ');
     var absHere = r.absent || [];
-    $('pfMeetBody').innerHTML = r.t + '　' + r.k + '　' + f1(r.a) + (r.u === 'piece' ? ' 件' : ' 万元') + '　1 笔<br>经办：' +
-      nameOf(byOf(r)) + '（' + byOf(r) + '）· ' + (r.src || '') + '录入 · 状态：' + ST[stOf(r)][0] +
+    $('pfMeetBody').innerHTML = offBanner() + '<div class="pf-strip">' + strip + '</div>' +
+      r.t + '　' + r.k + '　' + f1(r.a) + (r.u === 'piece' ? ' 件' : ' 万元') + '　1 笔<br>经办：' +
+      nameOf(byOf(r)) + '（' + byOf(r) + '）· ' + (r.src || '') + '录入 · 状态：' + faceOf(r)[0] +
       '<br>票池　' + (VOTERS.indexOf(byOf(r)) >= 0
         ? (VOTERS.length + ' 人可投 · 扣经办人自己后 ' + pool.length + ' 票')
         : (VOTERS.length + ' 人可投 · 经办人不在名单，不扣，这一笔 ' + pool.length + ' 票')) +
@@ -1287,8 +1600,9 @@
       var voted = votesOf(r).indexOf(n) >= 0;
       var gone = absHere.some(function (a) { return a.no === n; });
       var agreed = agreeNo(n);
-      var cls = agreed ? 'mt-def' : (prox ? 'mt-proxy' : (gone ? 'mt-absent' : (voted ? 'mt-ok' : 'mt-wait')));
-      var txt = agreed ? '已投 · 默认同意' : (prox ? '已投 · 代 △' : (gone ? '缺席 ×' : (voted ? '已投 ✓' : '未投 ○')));
+      var backed = prox && prox.mode === '后台代确认';
+      var cls = backed ? 'mt-proxy' : (agreed ? 'mt-def' : (prox ? 'mt-proxy' : (gone ? 'mt-absent' : (voted ? 'mt-ok' : 'mt-wait'))));
+      var txt = backed ? '已投 · 代' : (agreed ? '已投 · 默认同意' : (prox ? '已投 · 代 △' : (gone ? '缺席 ×' : (voted ? '已投 ✓' : '未投 ○'))));
       return '<button type="button" class="' + cls + (MEET_FOR === n ? ' on' : '') + '" data-act="meetPick" data-no="' + n + '"' +
         (prox ? " data-proxy='" + JSON.stringify(prox).replace(/'/g, '') + "'" : '') + '>' +
         nameOf(n) + '<br>' + txt + '</button>';
@@ -1297,9 +1611,10 @@
     var votedP = !!(MEET_FOR && votesOf(r).indexOf(MEET_FOR) >= 0);
     var why = '';
     if (MEET_FOR && r.draft) why = '这一笔是草稿，本人还没核对，任何人不能替投';
+    else if (MEET_FOR && agreeNo(MEET_FOR)) why = '已投 · 默认同意，不能代记，也不能记缺席';
     else if (votedP) why = '已投，不能记缺席';
     else if (absRec) why = '已记缺席 · ' + nameOf(absRec.byNo) + '（' + absRec.byNo + '）· ' + absRec.at;
-    var can = MEET_FOR && MEET_FOR !== byOf(r) && !votedP && !absRec && !r.draft;
+    var can = MEET_FOR && MEET_FOR !== byOf(r) && !agreeNo(MEET_FOR) && !votedP && !absRec && !r.draft;
     $('pfMeetAct').innerHTML =
       '<button type="button" data-act="meetProxy"' + (can ? '' : ' disabled') + '>代记通过' + (MEET_FOR ? ' · ' + nameOf(MEET_FOR) : '') + '</button> ' +
       '<button type="button" data-act="meetAbsent"' + (can ? '' : ' disabled') + '>记缺席</button> ' +
@@ -1368,12 +1683,33 @@
       b.classList.toggle('on', on);
     });
   }
+  function dashNodes() {
+    var c = document.getElementById('content');
+    if (!c) return [];
+    return Array.prototype.filter.call(c.children, function (n) {
+      return n.id !== 'v10ViewBar' && n.id !== 'v10Drawer' && n.id !== 'v10View' && n.id !== 'v10Board';
+    });
+  }
+  function setDash(on) {
+    dashNodes().forEach(function (n) {
+      if (on) {
+        if (n.getAttribute('data-dash') != null) {
+          n.style.display = n.getAttribute('data-dash');
+          n.removeAttribute('data-dash');
+        }
+      } else if (!n.getAttribute('data-dash')) {
+        n.setAttribute('data-dash', n.style.display || '');
+        n.style.display = 'none';
+      }
+    });
+  }
   function showBoard() {
     mount();
     var view = $('v10View');
     var board = $('v10Board');
     if (view) view.hidden = true;
     if (board) board.hidden = false;
+    setDash(true);
     markNav('board');
   }
 
@@ -1385,6 +1721,8 @@
     if (name === 'board') { showBoard(); return; }
     if (board) board.hidden = true;
     if (view) view.hidden = false;
+    setDash(false);
+    if (view && view.scrollIntoView) view.scrollIntoView({ block: 'start' });
     ['pfLead', 'pfClearK', 'pfClearCnt', 'pfClearList', 'pfClearNote', 'pfConfirmLead', 'pfConfirmList', 'pfConfirmNote', 'pfDeadBar', 'pfDeadK', 'pfDeadList', 'pfDeadNote', 'pfMeetHead', 'pfMeetBody', 'pfMeetPool', 'pfMeetAct', 'pfMeetSum', 'winGrid', 'kioskGrid', 'queueList', 'apptList', 'tabActs', 'tabNote', 'v10Built'].forEach(function (id) {
       var n = $(id); if (n) n.innerHTML = '';
     });
@@ -1456,11 +1794,13 @@
       else if (act === 'meetPrev') MEET_I -= 1;
       else if (act === 'meetNext') MEET_I += 1;
       else if (act === 'meetEnd') MEET_SUM = meetSummary();
-      else if (row && act === 'meetProxy' && MEET_FOR && MEET_FOR !== byOf(row) && votesOf(row).indexOf(MEET_FOR) < 0 && !row.draft) {
+      else if (row && act === 'meetProxy' && MEET_FOR && !agreeNo(MEET_FOR) && MEET_FOR !== byOf(row) && votesOf(row).indexOf(MEET_FOR) < 0 && !row.draft) {
         votesOf(row).push(MEET_FOR);
         row.proxy = (row.proxy || []).concat([{ forNo: MEET_FOR, byNo: meNo(), at: (function () { var d = new Date(); return (d.getHours() < 10 ? '0' : '') + d.getHours() + ':' + (d.getMinutes() < 10 ? '0' : '') + d.getMinutes(); })(), mode: '会议代记', signed: false }]);
-      } else if (row && act === 'meetAbsent' && MEET_FOR && votesOf(row).indexOf(MEET_FOR) < 0 && !(row.absent || []).some(function (a) { return a.no === MEET_FOR; })) {
+        saveVotes();
+      } else if (row && act === 'meetAbsent' && MEET_FOR && !agreeNo(MEET_FOR) && votesOf(row).indexOf(MEET_FOR) < 0 && !(row.absent || []).some(function (a) { return a.no === MEET_FOR; })) {
         row.absent = (row.absent || []).concat([{ no: MEET_FOR, byNo: meNo(), at: hm() }]);
+        saveVotes();
       } else if (row && act === 'meetRej') {
         rejsOf(row).push({ who: meNo(), why: '清分会驳回' });
       }
@@ -1475,6 +1815,7 @@
         PERF.forEach(function (r) {
           if (byOf(r) === who && canVote(r)) votesOf(r).push(meNo());
         });
+        saveVotes();
         renderConfirm();
       } else if (kind === 'rejOne') {
         REJ_I = Number(book.getAttribute('data-i'));
@@ -1483,6 +1824,7 @@
         var rr = PERF[Number(book.getAttribute('data-i'))];
         if (rr) rejsOf(rr).push({ who: meNo(), why: book.getAttribute('data-why'), at: hm() });
         REJ_I = -1;
+        saveVotes();
         renderConfirm();
       } else if (kind === 'redoCount' && TILL.count && TILL.count.at && !TILL.close) {
         TILL.count = { prev: { at: TILL.count.at, by: TILL.count.by, real: TILL.count.real, diff: TILL.count.diff, prev: TILL.count.prev || null } };
@@ -1503,22 +1845,55 @@
       if (kind === 'redoCount' || kind === 'redoHand' || kind === 'tillClose') renderSettle();
       return;
     }
+    var gate = e.target && e.target.closest ? e.target.closest('[data-act="rerun"], [data-act="dc"], [data-act="dcPick"], [data-act="urge"], [data-act="check"], [data-act="proxyNo"]') : null;
+    if (gate) {
+      var gact = gate.getAttribute('data-act');
+      var gi = Number(gate.getAttribute('data-i'));
+      if (gact === 'rerun') doRerun(gi);
+      else if (gact === 'dc') doDcOpen(gi);
+      else if (gact === 'dcPick') doDcPick(gi, gate.getAttribute('data-way'));
+      else if (gact === 'urge') doUrge(gi);
+      else if (gact === 'check' && gate.hasAttribute('data-dead')) doCheckDead(Number(gate.getAttribute('data-dead')));
+      else if (gact === 'check') doCheckRow(gi);
+      else if (gact === 'proxyNo') doProxy(gi, gate.getAttribute('data-no'));
+      return;
+    }
     var vote = e.target && e.target.closest ? e.target.closest('[data-act="vote"]') : null;
     if (vote) {
       var row = PERF[Number(vote.getAttribute('data-i'))];
       if (row && canVote(row)) {
         votesOf(row).push(meNo());
+        saveVotes();
         if ($('v10Drawer') && $('v10Drawer').querySelector('button.on[data-view="renderConfirm"]')) renderConfirm();
         else renderClear();
       }
       return;
     }
+    var serveBtn = e.target && e.target.closest ? e.target.closest('[data-serve]') : null;
+    if (serveBtn) { openServe(serveBtn.getAttribute('data-serve')); return; }
+    var lobbyBtn = e.target && e.target.closest ? e.target.closest('[data-lobby="call"]') : null;
+    if (lobbyBtn) {
+      fetch('/api/lobby/call', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ role: ROLE }) })
+        .then(function (r) { return r.json(); })
+        .then(function (body) { if (body && body.windows) paintLobby(body); });
+      return;
+    }
+    var apptBtn = e.target && e.target.closest ? e.target.closest('[data-appt]') : null;
+    if (apptBtn) {
+      fetch('/api/lobby/appt', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ role: ROLE, id: apptBtn.getAttribute('data-appt') }) })
+        .then(function (r) { return r.json(); })
+        .then(function (body) { if (body && body.windows) paintLobby(body); });
+      return;
+    }
+    var seat = e.target && e.target.closest ? e.target.closest('[data-seat]') : null;
+    if (seat) {
+      openSeat(seat);
+      return;
+    }
     var jump = e.target && e.target.closest ? e.target.closest('#quickrow button') : null;
     if (jump) {
       var name = jump.getAttribute('data-jump');
-      var id = name === '查看预约' ? 'apptList' : (name === '为客户取号' ? 'queueList' : 'winGrid');
-      var node = $(id);
-      if (node && node.scrollIntoView) node.scrollIntoView({ block: 'center' });
+      if (window.openHallAct) window.openHallAct(name, jump);
       return;
     }
     var b = e.target && e.target.closest ? e.target.closest('#v10ViewBar button, #v10Drawer button') : null;
@@ -1553,12 +1928,16 @@
         enter: enterGiven ? r.account_state === 'enter' : false,
         enterNote: enterGiven ? '' : '后端未返回该字段',
         title: r.title || '',
-        acct: enterGiven ? r.account_state : ''
+        acct: enterGiven ? r.account_state : '',
+        orgCode: r.org_code || '',
+        orgName: r.org_name || ''
       };
     });
     DATA.staff.rows = STAFF;
     DATA.staff.src = 'api';
+    STAFF_SOURCE = 'api';
     rebuildVoters();
+    if (window.applySite) window.applySite(STAFF);
     if (window.syncDoor) window.syncDoor();
     if (window.syncRoster) window.syncRoster();
     var found = bindMe(SESSION_NO);
@@ -1577,7 +1956,15 @@
   function loadStaff() {
     fetch('/api/staff').then(function (r) { return r.json(); }).then(function (body) {
       if (body && body.staff && body.staff.length) applyStaff(body.staff);
-    }).catch(function () {});
+      else {
+        STAFF_SOURCE = 'fallback';
+        console.warn('名册未接入');
+      }
+    }).catch(function (err) {
+      STAFF_SOURCE = 'fallback';
+      console.warn('名册未接入', err && err.message);
+      if (window.syncDoor) window.syncDoor();
+    });
   }
   loadStaff();
 

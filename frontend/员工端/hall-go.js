@@ -1,3 +1,6 @@
+/* 二级页目录只写这一处。左栏 pgroup、功能区、hall-keys 都用它。 */
+window.PAGE_BASE = '二级页/';
+
 /* 同一岗位的功能区只认这一张表。页面不再各写一份去处。 */
 window.HALL_GO = {
   P1: {
@@ -10,7 +13,6 @@ window.HALL_GO = {
     '调岗与交接': '06_调岗与交接.html#调岗申请',
     '调岗申请': '06_调岗与交接.html#调岗申请',
     '交接单': '06_调岗与交接.html#交接单',
-    '操作留痕': '08_审计.html#操作留痕',
     '授权流水': '06_授权.html#已授权记录',
     '异常预警': '08_审计.html#异常预警',
     '全支局': '06_业务.html#支局业务',
@@ -39,8 +41,7 @@ window.HALL_GO = {
     '预约': '07_客户.html#预约客户',
     '回访': '07_客户.html#待回访',
     '管户': '07_客户.html#重点客户',
-    '政务代办': '06_业务.html#政务代办',
-    '操作留痕': '08_审计.html#操作留痕'
+    '政务代办': '06_业务.html#政务代办'
   },
   P4: {
     '预约查询': '09_业务.html#预约管理',
@@ -177,7 +178,7 @@ window.HALL_RIBBON = {
     var cut = dest.indexOf('#');
     if (cut >= 0) { file = dest.slice(0, cut); hash = dest.slice(cut + 1); }
     if (file === hereFile()) { if (hash) showPane(hash); return; }
-    location.href = dest;
+    location.href = dest.indexOf(window.PAGE_BASE) === 0 ? dest : window.PAGE_BASE + dest;
   }, true);
 })();
 

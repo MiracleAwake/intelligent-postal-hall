@@ -39,7 +39,7 @@
 
   function rowHtml(item) {
     var st = STATUS_CLASS[item.status] || 'st-wait';
-    return '<div class="lst-r" data-live="1" data-f="today" data-id="' + esc(item.id) + '">' +
+    return '<div class="lst-r" data-live="1" data-f="today" data-id="' + esc(item.id) + '" data-cid="' + esc(item.cid) + '">' +
       '<div class="cust"><span class="av">' + esc(item.name.charAt(0)) + '</span><span class="cn">' + esc(item.name) + '</span></div>' +
       '<div><span class="tag-line">' + esc(item.line) + '</span>' + esc(item.intent) + '</div>' +
       '<div>' + esc(item.slot) + '</div>' +
@@ -87,10 +87,11 @@
     document.addEventListener('click', function (e) {
       var btn = e.target.closest && e.target.closest('[data-live="1"] button[data-act]');
       if (!btn) return;
+      var action = btn.getAttribute('data-act');
+      if (action !== 'remind' && action !== 'reappoint') return;
       e.stopPropagation();
       var row = btn.closest('.lst-r');
       var id = row.getAttribute('data-id');
-      var action = btn.getAttribute('data-act');
       fetch('/api/appointments/act', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

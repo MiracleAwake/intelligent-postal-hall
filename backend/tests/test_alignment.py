@@ -1,7 +1,6 @@
 import unittest
 
 from app.assembly.alignment import (
-    GUARD_REASON,
     from_login,
     from_roster,
     from_shell,
@@ -30,7 +29,8 @@ class RoleAlignment(unittest.TestCase):
         self.assertEqual(admin["name"], "系统管理员")
 
     def test_roster_posts_without_a_backend_code(self):
-        self.assertEqual(from_roster("P7")["note"], GUARD_REASON)
+        self.assertEqual(from_roster("P7")["account"], "no_page")
+        self.assertIn("默认同意", from_roster("P7")["note"])
         self.assertIsNone(from_roster("P7")["role_code"])
         self.assertEqual(from_roster("P5")["account"], "no_page")
         self.assertEqual(from_roster("P6")["account"], "no_page")
@@ -50,8 +50,8 @@ class RoleAlignment(unittest.TestCase):
         self.assertIn("未单独成页", wealth["note"])
         self.assertIn("未单独成页", comprehensive["note"])
         guard = identify("1022")
-        self.assertEqual(guard["kind"], "refuse")
-        self.assertEqual(guard["reason"], GUARD_REASON)
+        self.assertEqual(guard["kind"], "no_page")
+        self.assertIn("默认同意", guard["note"])
         self.assertIsNone(guard["role_code"])
         self.assertEqual(identify("1001")["session"], "会话留在原网点")
 

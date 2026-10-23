@@ -12,6 +12,7 @@ from app.capabilities.speech import accept_speech
 from app.services.act import run_act
 from app.services.appointments import act as appointment_act
 from app.services.appointments import view as appointment_view
+from app.services.lobby import call_next, serve as lobby_serve, take_ticket, touch_appt, view as lobby_view
 from app.services.duties import confirm as confirm_duty
 from app.services.duties import view as today_view
 from app.services.shell_desk import snapshot
@@ -260,6 +261,45 @@ def create_app() -> FastAPI:
             str(body.get("role") or ""),
             str(body.get("id") or ""),
             str(body.get("action") or ""),
+            path=path,
+        )
+
+    @app.get("/api/lobby")
+    def lobby(request: Request, role: str = ""):
+        path = request.app.state.people_db
+        return lobby_view(role, path=path)
+
+    @app.post("/api/lobby/call")
+    def lobby_call(request: Request, body: dict):
+        path = request.app.state.people_db
+        return call_next(str(body.get("role") or ""), path=path)
+
+    @app.post("/api/lobby/take")
+    def lobby_take(request: Request, body: dict):
+        path = request.app.state.people_db
+        return take_ticket(
+            str(body.get("role") or ""),
+            str(body.get("item") or ""),
+            str(body.get("who") or ""),
+            path=path,
+        )
+
+    @app.post("/api/lobby/serve")
+    def lobby_serve_route(request: Request, body: dict):
+        path = request.app.state.people_db
+        return lobby_serve(
+            str(body.get("role") or ""),
+            str(body.get("id") or ""),
+            body.get("picks") or [],
+            path=path,
+        )
+
+    @app.post("/api/lobby/appt")
+    def lobby_appt(request: Request, body: dict):
+        path = request.app.state.people_db
+        return touch_appt(
+            str(body.get("role") or ""),
+            str(body.get("id") or ""),
             path=path,
         )
 

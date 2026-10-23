@@ -46,7 +46,13 @@ class PeopleTests(unittest.TestCase):
         self.assertEqual(staff["9001"]["role_code"], "P5")
         self.assertEqual(staff["1002"]["account_state"], "no_page")
         self.assertIsNone(staff["1002"]["role_code"])
-        self.assertEqual(staff["1022"]["account_state"], "refuse")
+        self.assertEqual(staff["1002"]["org_code"], "df")
+        self.assertEqual(staff["1010"]["org_code"], "df")
+        self.assertEqual(staff["1018"]["org_code"], "df")
+        self.assertEqual(staff["1022"]["account_state"], "no_page")
+        self.assertIsNone(staff["1022"]["role_code"])
+        self.assertEqual(staff["1022"]["org_code"], "df")
+        self.assertEqual(staff["9001"]["org_code"], "hq")
         self.assertEqual(staff["1018"]["title"], "理财经理")
 
     def test_admin_route_does_not_return_the_clear_row(self):

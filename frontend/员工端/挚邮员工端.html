@@ -99,7 +99,7 @@
   .rg.min .rg-i{display:none}
   .rg.min{padding:0 14px}
   .rg.min .gchev{transform:rotate(180deg)}
-  .rb{width:66px;padding:5px 2px;border-radius:5px;display:flex;flex-direction:column;
+  .rb{width:64px;padding:5px 2px;border-radius:5px;display:flex;flex-direction:column;
       align-items:center;gap:4px;font-size:11.5px;color:var(--t2)}
   .rb:hover{background:#eef0f3}
   .rb.on{background:var(--pg-l)}
@@ -600,6 +600,9 @@
 .perfdlg .s-wait{background:#fdf2e4;color:#b8621b}
 .perfdlg .s-draft{background:#eef0f5;color:#5b6480}
 .perfdlg .s-rej{background:#fdeceb;color:#b03a2e}
+.perfdlg .s-mute{background:#eef0f5;color:#5b6480}
+.pf-off{margin:0 0 8px;padding:6px 10px;background:#eef0f5;color:#3d4458;border-radius:8px}
+.pf-strip{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 8px}
 .perfdlg .src-m{background:#f0eaff;color:#6b4bb5;border-radius:4px;padding:0 5px;font-size:10.5px}
 .perfdlg .pf-grp{border:1px solid #e6ece9;border-radius:10px;margin-bottom:10px;overflow:hidden}
 .perfdlg .pf-gh{display:flex;align-items:center;gap:9px;padding:8px 12px;background:#fbfcfc;border-bottom:1px solid #e6ece9}
@@ -1354,7 +1357,7 @@ body.adm-desk #v10Board .c-h b{ font-size:16px; }
 body.rb-off .ribbon{ height:0; min-height:0; overflow:hidden; }
 /* 先压缩，再换行：能一行装下就不换（换行只是最后的保险，不是首选） */
 @media (max-width:1500px){
-  .rb{ width:56px; box-sizing:border-box; }
+  .rb{ width:64px; box-sizing:border-box; }
   .rg{ padding:0 6px; }
 }
 @media (max-width:1180px){
@@ -1856,10 +1859,16 @@ body.rb-off .ribbon{ height:0; min-height:0; overflow:hidden; }
   </div>
   <div class="tabs" id="tabBar">
     <div class="tab on" data-tab="1">
-      <svg class="ic-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"><use href="#g-home"/></svg>
-      <span id="tab1">主页</span>
+      <svg class="ic-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"><use href="#g-env"/></svg>
+      <span id="tab1">主页 · 厅堂概览</span>
+      <button class="tx" type="button" title="关闭">×</button>
     </div>
-    <div class="tab" data-tab="2"><span id="tab2">本日经办</span></div>
+    <div class="tab" data-tab="2">
+      <svg class="ic-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"><use href="#g-doc"/></svg>
+      <span id="tab2">今日厅堂分流与预约</span>
+      <span class="tdot" title="待处理"></span>
+      <button class="tx" type="button" title="关闭">×</button>
+    </div>
     <div class="tab ghost"><span id="tab3">待接入 · 扫码中…</span></div>
     <button class="tadd" id="tabAdd" title="新建会话">＋</button>
   </div>
@@ -2135,7 +2144,7 @@ body.rb-off .ribbon{ height:0; min-height:0; overflow:hidden; }
         </div>
         <p class="lc-foot">
           本页是<b>界面原型</b>，不连真实工号库 · 所有校验都在本机跑。<br>
-          1010 / 1018 / 1020 有岗无页，登录会说明原因，不硬塞进别人的视图。
+          无页面岗位登录会说明原因，不硬塞进别人的视图。
         </p>
       </div>
     </main>
@@ -2145,9 +2154,9 @@ body.rb-off .ribbon{ height:0; min-height:0; overflow:hidden; }
 <div class="v10-toast" id="v10Toast" hidden></div>
 
 <script src="hall-wire.js"></script>
-<script src="hall-go.js"></script>
+<script src="hall-go.js?v=c1p"></script>
 <script src="hall-live.js"></script>
-<script src="hall-views.js?v=rule4"></script>
+<script src="hall-views.js?v=r0120c"></script>
 <script>
 /* ============================================================
    10 员工端 · 五合一壳
@@ -2171,8 +2180,26 @@ body.rb-off .ribbon{ height:0; min-height:0; overflow:hidden; }
   syncRoster();
 
   var SITE = {
-    name: '东风路支局', code: 'df', org: '东风路支局 · 综合营业厅',
+    name: '', code: '', org: '',
     ver: 'v1.0 · 2026-10', sync: '15:47'
+  };
+  window.applySite = function (rows) {
+    var df = (rows || []).filter(function (s) { return s.orgCode === 'df' && s.orgName; })[0];
+    var hq = (rows || []).filter(function (s) { return s.orgCode === 'hq' && s.orgName; })[0];
+    if (df) {
+      SITE.name = df.orgName;
+      SITE.code = df.orgCode;
+      SITE.org = df.orgName;
+      var a = document.querySelector('#lgSite option[value="df"]');
+      if (a) a.textContent = df.orgName;
+    }
+    if (hq) {
+      var b = document.querySelector('#lgSite option[value="hq"]');
+      if (b) b.textContent = hq.orgName;
+    }
+    if (SITE.name && document.title.indexOf('邮政智能厅堂') >= 0 && document.title.indexOf(SITE.name) < 0) {
+      document.title = SITE.name + document.title.replace(/^\s*·\s*/, ' · ');
+    }
   };
 
   function onDuty() {
@@ -2287,7 +2314,7 @@ body.rb-off .ribbon{ height:0; min-height:0; overflow:hidden; }
     { t:'到访客户数量', i:'g-users',  v:'49<u>人</u>',  s:'当班 2 人 · 人均 24 人', warn:1 },
     { t:'收寄件量',     i:'g-box',    v:'63<u>件</u>',  s:'<span class="up">↑ 8</span> 较昨日' },
     { t:'政务代办量',   i:'g-gov',    v:'9<u>笔</u>',   s:'社保 5 · 交管 3 · 税邮 1' },
-    { t:'平均办理时长', i:'g-clock',  v:'4.8<u>分钟</u>', s:'当前等待 <b>4</b> 位', warn:1 },
+    { t:'平均办理时长', i:'g-clock',  v:'4.8<u>分钟</u>', s:'当前等待 <b class="js-wait">—</b> 位', warn:1 },
     { t:'验视可疑件',   i:'g-ban',    v:'2<u>件</u>',   s:'1 件待台席复核' },
     { t:'事项办成率',   i:'g-check',  v:'86<u>%</u>',   s:'转人工 <b>6</b> 次' }
   ],
@@ -2456,7 +2483,7 @@ body.rb-off .ribbon{ height:0; min-height:0; overflow:hidden; }
     P1: {
       role: 'P1', badge: '局', label: '支局经理',
       desk: '东风路支局 · 支局长室', scope: 'site', page: '06_支局经理页.html',
-      railLabel: '业务模块', color: '#00693e', pgroup: '二级页/06_',
+      railLabel: '业务模块', color: '#00693e', pgroup: window.PAGE_BASE + '06_',
       tab1: '主页 · 支局概览', tab2: '授权待办 · 3 件',
       metaFn: function () {
         return '在岗 <b>' + onDuty() + '</b> 人 · 待我授权 <b>' + AUTH.length + '</b> 件 · 当班授权 <b>11</b> 次';
@@ -2469,25 +2496,25 @@ body.rb-off .ribbon{ height:0; min-height:0; overflow:hidden; }
     P2: {
       role: 'P2', badge: '金', label: '普通柜员',
       desk: '东风路支局 · 01 号台', scope: 'mine', page: '05_普通柜员页.html',
-      railLabel: '业务模块', color: '#1a5f8a', pgroup: '二级页/05_',
+      railLabel: '业务模块', color: '#1a5f8a', pgroup: window.PAGE_BASE + '05_',
       tab1: '主页 · 本日经办', tab2: '李×× · 定期存款到期转存',
       metaFn: function () {
         return '叫号 <b>F007</b> · 今日已办 <b>23</b> 件 · 待办 <b>2</b> 件 · 条线在岗 <b>' + staffOf('P2').length + '</b> 人';
       },
       greet: '下午好，<b>赵××</b>。01 号台当前叫号 <b>F007</b>，今日已办 <b>23</b> 件，还有 <b>2</b> 件待办 —— 下一笔是李××的定期到期转存。',
       gsub: '数据更新于 15:47 · 本人口径 · 只统计本台席经办的业务',
-      g2: ['今日已办 <b>23</b> 件', '当前叫号 <b>F007</b>', '等待客户 <b>3</b> 位', '平均办理 <b>8.4</b> 分钟'],
+      g2: ['今日已办 <b>23</b> 件', '当前叫号 <b>F007</b>', '等待客户 <b class="js-wait">—</b> 位', '平均办理 <b>8.4</b> 分钟'],
       kpiTitle: '本日业务数据', kpiSub: '更新于 15:47 · 口径见各卡明细'
     },
     P3: {
       role: 'P3', badge: '邮', label: '邮政营业',
       desk: '东风路支局 · 2 号台席', scope: 'mine', page: '07_邮政营业页.html',
-      railLabel: '业务模块', color: '#0f6b4f', pgroup: '二级页/07_',
+      railLabel: '业务模块', color: '#0f6b4f', pgroup: window.PAGE_BASE + '07_',
       tab1: '主页 · 台席概览', tab2: '收寄 · 国际包裹',
       metaFn: function () {
-        return '叫号 <b>A021</b> · 等待 <b>4</b> 位 · 代办待办 <b>4</b> 件 · 今日收寄 <b>63</b> 件';
+        return '叫号 <b>A021</b> · 等待 <b class="js-wait">—</b> 位 · 代办待办 <b>4</b> 件 · 今日收寄 <b>63</b> 件';
       },
-      greet: '下午好，<b>秦××</b>。2 号台席当前叫号 <b>A021</b>，等待 <b>4</b> 位；在办一件国际包裹，客户正在手机上填面单。',
+      greet: '下午好，<b>秦××</b>。2 号台席当前叫号 <b>A021</b>，等待 <b class="js-wait">—</b> 位；在办一件国际包裹，客户正在手机上填面单。',
       gsub: '数据更新于 16:02 · 台席口径 · 只统计本台席收寄与代办',
       g2: ['今日收寄 <b>63</b> 件', '代办 <b>28</b> 笔', '待封发 <b>7</b> 件', '平均办理 <b>6.8</b> 分钟'],
       kpiTitle: '本日收寄与代办', kpiSub: '更新于 16:02 · 台席口径'
@@ -2495,20 +2522,20 @@ body.rb-off .ribbon{ height:0; min-height:0; overflow:hidden; }
     P4: {
       role: 'P4', badge: '厅', label: '大堂经理',
       desk: '东风路支局 · 厅堂', scope: 'mine', page: '09_大堂经理页.html',
-      railLabel: '业务模块', color: '#6b4fbb', pgroup: '二级页/09_',
+      railLabel: '业务模块', color: '#6b4fbb', pgroup: window.PAGE_BASE + '09_',
       tab1: '主页 · 厅堂概览', tab2: '今日厅堂分流与预约',
       metaFn: function () {
-        return '当前等候 <b>4</b> 位 · 今日到店 <b>91</b> 位 · 预约 <b>9</b> 笔 · 分流成功 <b>86%</b>';
+        return '当前等候 <b class="js-wait">—</b> 位 · 今日到店 <b>91</b> 位 · 预约 <b>9</b> 笔 · 分流成功 <b>86%</b>';
       },
-      greet: '下午好，<b>孙××</b>。厅堂当前等候 <b>4</b> 位，<b>2</b> 笔预约未到店；3 号窗口刚发起双人复核请求。',
+      greet: '下午好，<b>孙××</b>。厅堂当前等候 <b class="js-wait">—</b> 位，<b>2</b> 笔预约未到店；3 号窗口刚发起双人复核请求。',
       gsub: '数据更新于 15:47 · 厅堂口径 · 统计范围：本网点厅堂',
-      g2: ['今日到店 <b>91</b> 位', '当前等候 <b>4</b> 位', '平均等候 <b>6.2</b> 分钟', '预约到店率 <b>56%</b>'],
+      g2: ['今日到店 <b>91</b> 位', '当前等候 <b class="js-wait">—</b> 位', '平均等候 <b>6.2</b> 分钟', '预约到店率 <b>56%</b>'],
       kpiTitle: '本日厅堂数据', kpiSub: '更新于 15:47 · 厅堂口径'
     },
     P5: {
       role: 'P5', badge: '管', label: '系统管理员',
       desk: '东风区分公司 · 信息岗', scope: 'region', page: '08_管理员端.html',
-      railLabel: '管理模块', color: '#4a5568', pgroup: '二级页/08_',
+      railLabel: '管理模块', color: '#4a5568', pgroup: window.PAGE_BASE + '08_',
       staffGroup: '组织',
       tab1: '全局概览', tab2: '人员网络 · 调岗',
       metaFn: function () {
@@ -2691,7 +2718,7 @@ body.rb-off .ribbon{ height:0; min-height:0; overflow:hidden; }
       P1: [[d, '在岗'], [AUTH.length, '待我授权'], [3, '今日必办']],
       P2: [[d, '在岗'], [2, '本台待办'], [23, '今日已办']],
       P3: [[d, '在岗'], [4, '代办待办'], [63, '今日收寄']],
-      P4: [[d, '在岗'], [4, '当前等候'], [91, '今日到店']],
+      P4: [[d, '在岗'], [window.HALL_WAIT == null ? '—' : window.HALL_WAIT, '当前等候'], [91, '今日到店']],
       P5: [[12, '纳管网点'], [2, '待确认'], [39, '在线终端']]
     };
     return m[cur.role] || m.P1;
@@ -2820,7 +2847,7 @@ body.rb-off .ribbon{ height:0; min-height:0; overflow:hidden; }
         var mark = Array.isArray(s) ? s[1] : 0;
         var stay = name === '模型与设定' || name === '知识库' || name === '数据库管理';
         var go = window.HALL_GO && window.HALL_GO[cur.role] && window.HALL_GO[cur.role][name];
-        var page = go ? ('二级页/' + go) : (groupPage(g.n) + '#' + name);
+        var page = go ? (window.PAGE_BASE + go) : (groupPage(g.n) + '#' + name);
         return '<div class="sub' + (mark ? ' on' : '') + '" data-grp="' + esc(g.n) + '" data-sub="' + esc(name) + '"' +
           (stay ? ' data-stay="' + esc(name) + '"' : ' data-pg="' + esc(page) + '"') +
           ' title="' + esc(name) + '">' + esc(name) + '</div>';
@@ -3135,7 +3162,7 @@ body.rb-off .ribbon{ height:0; min-height:0; overflow:hidden; }
     P4: {
       sess: '厅堂 · 等候与分流',
       ask: '等候超过 10 分钟的客户，该怎么处理？',
-      think: '郑×× 已等 <b>11 分钟</b>，办的是理财赎回 —— 复杂度中，01 号台最合适。<br>先分流，再解释；只道歉不解决，客户体感不会变。<br>当前等候 4 位，未到增开窗口的阈值。',
+      think: '郑×× 已等 <b>11 分钟</b>，办的是理财赎回 —— 复杂度中，01 号台最合适。<br>先分流，再解释；只道歉不解决，客户体感不会变。<br>当前等候 <b class="js-wait">—</b> 位，未到增开窗口的阈值。',
       tools: [['g-take', '读取', '排队号 · 郑××', '已读取', 0],
               ['g-users', '比对', '台席忙闲 · 01 / 02 / 03', '01 号最空', 0],
               ['g-flow', '匹配', '业务复杂度 · 理财赎回', '中', 0],
@@ -3439,8 +3466,9 @@ body.rb-off .ribbon{ height:0; min-height:0; overflow:hidden; }
     if (qdEl && qdEl.parentNode) qdEl.parentNode.removeChild(qdEl);
     qdEl = null;
   }
-  function openQd(title, sub, ic, body) {
+  function openQd(title, sub, ic, body, act) {
     closeQd();
+    var goBtn = (act && act.go) ? '<button class="qd-btn pri" data-qd="go">' + esc(act.go) + '</button>' : '';
     var w = document.createElement('div');
     w.id = 'v10Qd';
     w.innerHTML = '<div class="qd-mask on" data-qd="close"></div>' +
@@ -3449,14 +3477,386 @@ body.rb-off .ribbon{ height:0; min-height:0; overflow:hidden; }
       '<div class="qd-tt"><b>' + esc(title) + '</b><span>' + esc(sub) + '</span></div>' +
       '<button class="qd-x" data-qd="close" aria-label="关闭">✕</button></div>' +
       '<div class="qd-bd" style="max-height:66vh">' + body + '</div>' +
-      '<div class="qd-ft"><span class="sp"></span><button class="qd-btn" data-qd="close">关闭</button></div></div>';
+      '<div class="qd-ft"><span class="sp"></span><button class="qd-btn" data-qd="close">关闭</button>' + goBtn + '</div></div>';
     document.body.appendChild(w);
     qdEl = w;
     w.addEventListener('click', function (e) {
       var t = e.target.closest && e.target.closest('[data-qd]');
-      if (t) { e.preventDefault(); closeQd(); }
+      if (!t) return;
+      e.preventDefault();
+      if (t.getAttribute('data-qd') === 'go' && act) {
+        var d = new Date();
+        var when = ('0' + d.getHours()).slice(-2) + ':' + ('0' + d.getMinutes()).slice(-2);
+        var msg = act.done || '已完成';
+        if (act.btn) {
+          act.btn.classList.add('done');
+          act.btn.setAttribute('title', msg + ' · ' + when);
+        }
+        closeQd();
+        var bar = document.getElementById('qdDone');
+        if (!bar) {
+          bar = document.createElement('div');
+          bar.id = 'qdDone';
+          bar.className = 'qd-done';
+          document.body.appendChild(bar);
+        }
+        bar.textContent = msg + ' · ' + when;
+        bar.hidden = false;
+        clearTimeout(window.__qdT);
+        window.__qdT = setTimeout(function () { bar.hidden = true; }, 3200);
+        return;
+      }
+      closeQd();
     });
   }
+  var HALL_ACTS = {
+  P1: {
+    '全支局': {ic:'g-grid', sub:'岗位视图 · 东风路支局',
+      lead:'今日当班 9 人、在岗 7 人。柜面 4 个台席全开，邮政营业 3 个台席开了 2 个。',
+      rows:[['当班 / 在岗','9 人 / 7 人 · 请假 0 · 保安 1'],['台席','柜面 4 全开 · 营业 3 开 2'],
+            ['今日业务','91 人到店 · 8 笔 128.5 万'],['待处理','授权 3 · 死账 3 · 待确认 2']],
+      note:'全支局是看总量。要问某个人做了多少，切「逐岗位」—— 总量里看不出是谁的。',
+      go:'切到全支局视图', done:'已切到「全支局」视图'},
+    '逐岗位': {ic:'g-users', sub:'岗位视图 · 八个岗位',
+      lead:'8 个岗位各 1 人（柜员 2 人），今天只有 3 个岗位有经办。',
+      rows:[['支局经理','王×× · 在岗 · 今日 0 笔经办'],['柜员','赵×× 3 笔 / 钱×× 3 笔 · 均 64.0 / 42.0 万'],
+            ['邮政营业','秦×× · 24 件 / 18 笔'],['大堂经理','孙×× · 促成 2 笔 22.5 万'],
+            ['理财经理 / 客户经理','尤×× 1 笔 12.0 万 / 施×× 0 笔']],
+      note:'没有经办不是没上班 —— 支局长和保安今天一笔没办，但在岗。别把「0 笔」读成「不在」。',
+      go:'逐岗位查看', done:'已切到「逐岗位」视图'},
+    '岗位对比': {ic:'g-eye', sub:'岗位视图 · 六个岗位横比',
+      lead:'6 个岗位里只有 3 个有经办，跨条线不排名次，只摆事实。',
+      rows:[['柜面（2 人）','6 笔 · 106.0 万 · 人均 53.0 万'],['邮政营业（1 人）','18 笔 · 24 件'],
+            ['大堂（1 人）','促成 2 笔 · 22.5 万'],['理财（1 人）','1 笔 · 12.0 万'],
+            ['管理 / 客户经理','0 笔（在岗）']],
+      note:'笔和件不是一种单位，万和件不能放一张榜上排名。要比就同类比，跨类只并列。',
+      go:'并排查看', done:'已并列 6 个岗位 · 未排名次'},
+    '批量批准': {ic:'g-check', sub:'授权审批 · 今日 3 件',
+      lead:'3 件里 2 件材料齐可以批，1 件缺双录 —— 那一件不在批量里。',
+      rows:[['可批','2 件 · 5.2 万 / 12.0 万 · 双录齐'],['不可批','1 件 · 8.0 万 · 双录未上传'],
+            ['合计','3 件 · 25.2 万']],
+      note:'批量批准不等于批量负责。批完每一件都要能说清为什么批 —— 缺双录那件单独办，别顺手勾上。',
+      go:'批准这 2 件', done:'已批准 2 件 · 1 件因双录缺失退回'},
+    '加急催办': {ic:'g-bell', sub:'授权审批 · 加急 3 件',
+      lead:'3 件挂了超过 30 分钟，最久 41 分钟，客户还在窗口前等。',
+      rows:[['陈×× · 5.2 万','41 分 · 等双录'],['吴×× · 12.0 万','33 分 · 等授权人签字'],
+            ['周×× · 8.0 万','31 分 · 材料待补']],
+      note:'催办催的是人，不是件。点三次「催办」不如走到那个人工位上说一句。',
+      go:'发送催办', done:'已催办 3 件 · 通知到 2 人'},
+    '接管': {ic:'g-take', sub:'会话 · 可接管 2 个',
+      lead:'2 个会话挂在柜员名下超过 5 分钟，客户还在等。',
+      rows:[['李×× · 定期转存','挂起 12 分 · 原经办 钱××'],['王×× · 理财','挂起 6 分 · 原经办 赵××']],
+      note:'接管留两个名字：原经办和接管人。只写接管人，责任就断了。',
+      go:'接管李××的会话', done:'已接管 · 李××（原经办 钱××）'},
+    '断点续办': {ic:'g-resume', sub:'会话 · 2 条断点',
+      lead:'2 单停在半路，都在本支局，接着做不用重开。',
+      rows:[['陈×× · 收寄','卡在加固 · 41 分'],['吴×× · 快递','卡在验视 · 26 分']],
+      note:'续办要接原单。另开一单等于重收一次，客户会被收两遍。',
+      go:'续办陈××的单', done:'已续办 · 陈×× · 从「加固」接着做'},
+    '转派': {ic:'g-transfer', sub:'会话 · 转派给谁',
+      lead:'8 人当班，能接金融业务的有 4 个，邮政营业只有 1 个。',
+      rows:[['赵×× / 钱××','柜面 · 今日 3 笔 / 3 笔 · 可用'],['秦××','邮政营业 · 24 件 · 仅收寄代办'],
+            ['尤××','理财 · 1 笔 · 仅理财'],['孙××','大堂 · 引导为主，不办柜面']],
+      note:'转派要看能不能接，不是看谁空。转错了要再转一次，客户被问两遍同样的问题。',
+      go:'选择接收人', done:'已转派 · 待接收人确认'},
+    '新建会话': {ic:'g-plus', sub:'会话 · 今日已建 23 个',
+      lead:'新建会话要带业务类型，类型决定走哪条链。',
+      opts:['开户（代理金融）','存取（代理金融）','理财（代理金融）','邮政营业（收寄 / 代办）'],
+      note:'会话一带就带工号。支局长新建的会话，经办人写的是支局长本人。',
+      go:'新建会话', done:'已新建会话 · 存取（代理金融）'},
+    '操作留痕': {ic:'g-trace', sub:'审计留痕 · 今日',
+      lead:'今天做过的动作都在这儿，谁、几点、对哪一笔。',
+      rows:[['15:47','批准 · 5.2 万 · 陈××（王××）'],['15:31','退回 · 8.0 万 · 双录缺失'],
+            ['14:52','转派 · 李×× · 赵×× → 钱××'],['09:12','开班 · 8 人签到。']],
+      note:'留痕只记动作，不记客户说了什么。客户的话进会话，不进台账。',
+      go:'导出今日留痕', done:'已导出 · 今日 11 条'},
+    '异常预警': {ic:'g-flag', sub:'审计留痕 · 3 条待看',
+      lead:'3 条预警，2 条是时长类，1 条是双录缺失 —— 都不是错，是要人看一眼。',
+      rows:[['双录缺失','1 件 · 8.0 万 · 已挂 31 分'],['超时授权','2 件 · 均超 30 分'],
+            ['连续在岗','1 人 · 连上 6 天（第 7 天才报警）']],
+      note:'预警不是处分。看了、处理了、写一句为什么，这条就消了 —— 别让它攒到月底。',
+      go:'逐条查看', done:'已查看 3 条 · 2 条标记处理'}
+  },
+  P2: {
+    '读卡': {ic:'g-id', sub:'接入身份 · 03 号台读卡区',
+      lead:'读卡区空闲，上一次读卡是 15:31（陈××）。',
+      rows:[['读卡器','03 号台 · 已连接'],['上次读卡','15:31 · 陈×× · 尾号 3721'],['今日读卡','6 次']],
+      note:'读卡只取证件里的字段，不取影像；影像另外存档，不留在这一台。',
+      go:'开始读卡', done:'已读到 陈×× · 身份证尾号 3721'},
+    '身份证': {ic:'g-user', sub:'接入身份 · 证件核验',
+      lead:'上一张证件是居民身份证，读出 5 个字段，全部通过校验位。',
+      rows:[['证件类型','居民身份证（身份证）'],['有效期','2031-06-18 · 未过期'],['读取字段','姓名 / 号码 / 住址 / 签发 / 有效期']],
+      note:'消磁或过期读不出来，不等于客户没有证件 —— 读不出要转人工核验，不能记成「无证件」。',
+      go:'读证件', done:'证件已读 · 5 个字段校验通过'},
+    '人脸核验': {ic:'g-cam', sub:'接入身份 · 活体比对',
+      lead:'摄像头在线，最近一次比对相似度 0.92，通过。',
+      rows:[['摄像头','03 号台 · 已连接'],['最近比对','15:44 · 相似度 0.92'],['今日','4 次 · 通过 4 · 转人工 0']],
+      note:'比对不过不等于冒用 —— 光线、口罩、年龄变化都会影响。连续两次不过要换人工，别让客户在窗口前反复摘口罩。',
+      go:'开始核验', done:'比对通过 · 相似度 0.92'},
+    '新建会话': {ic:'g-plus', sub:'会话 · 今日已建 23 个',
+      lead:'新建会话要带业务类型 —— 类型决定后面走哪条链，建错了要整条重来。',
+      opts:['开户（代理金融）','存取（代理金融）','理财（代理金融）','邮政营业（收寄 / 代办）'],
+      note:'会话一建立就带工号；换人接手要留接管记录，不是直接改人名。',
+      go:'新建会话', done:'已新建会话 · 存取（代理金融）'},
+    '接管': {ic:'g-take', sub:'会话 · 可接管 3 个',
+      lead:'3 个会话挂在别人名下超过 3 分钟，其中 1 个客户还在等。',
+      rows:[['李×× · 存取','挂起 12 分 · 前手 钱××'],['王×× · 理财','挂起 6 分 · 前手 赵××'],['周×× · 开户','挂起 3 分 · 前手 钱××']],
+      note:'接管不是复制会话：原来的经办记录留在原处，接管人从这一刻开始记。',
+      go:'接管李××的会话', done:'已接管 · 李×× · 存取（原经办 钱××）'},
+    '断点续办': {ic:'g-resume', sub:'会话 · 2 条断点',
+      lead:'2 单停在半路，都是今天开的，接着做不用重收。',
+      rows:[['陈×× · 包裹','卡在加固 · 41 分 · 客户去取泡沫箱'],['吴×× · 快递','卡在验视 · 26 分 · 未开箱']],
+      note:'断点续办要接着原单做。另开一单等于重收一次 —— 客户被收两遍，账也对不上。',
+      go:'续办陈××的包裹', done:'已续办 · 陈×× · 从「加固」接着做'},
+    '转人工': {ic:'g-transfer', sub:'依据核验 · 今日 5 次',
+      lead:'今日转人工 5 次，4 次已办结，1 次还在等回复。',
+      rows:[['已办结','4 次 · 平均等 6 分钟'],['待回','1 次 · 周×× 开户资料存疑'],['办成率影响','88%（37÷42，转人工已含在 42 内）']],
+      note:'转人工要写清卡在哪一步。只写「客户情况复杂」，下一手还得从头问一遍。',
+      go:'转出并填写卡点', done:'已转人工 · 卡点：开户资料存疑'},
+    '开户': {ic:'g-home', sub:'金融事项 · 开户前检查',
+      lead:'开户要过三项，缺一项就办不了 —— 这不是提醒，是拦。',
+      rows:[['实名','已核（证件 + 人脸）'],['手机号','已验 · 尾号 8891'],['风险测评','已做 · C3 稳健型']],
+      note:'三项缺一项，系统不放行。先办后补的口子不存在，别试。',
+      go:'开始开户', done:'开户检查通过 · 3/3'},
+    '存取': {ic:'g-coins', sub:'金融事项 · 今日 8 笔',
+      lead:'账户状态正常。5 万元以上要授权，授权人不在场不能先办后补。',
+      rows:[['账户','尾号 3721 · 正常'],['今日','8 笔 · 128.5 万'],['大额线','≥ 5 万需授权']],
+      note:'授权是另一双眼睛，不是流程装饰。先办后补等于没有授权。',
+      go:'录入金额', done:'已进入存取录入'},
+    '理财': {ic:'g-chart', sub:'金融事项 · 适当性',
+      lead:'客户风险等级 C3，只能看 R3 及以下的产品；超一级要双录并复核。',
+      rows:[['客户等级','C3 稳健型'],['可选产品','R1～R3 · 12 只'],['双录要求','R4 及以上必录']],
+      note:'等级不匹配就别推 —— 适当性不是勾选框，是签字要担的责任。',
+      go:'进入认购', done:'已进入认购 · 仅显示 R1～R3'},
+    '双录': {ic:'g-cam', sub:'依据核验 · 双录',
+      lead:'录制设备在线，今日 3 次全部当日上传，没有隔天补录。',
+      rows:[['设备','03 号台 · 摄像头 + 麦克风正常'],['今日','3 次 · 已上传 3'],['缺失','0']],
+      note:'双录当天上传，隔天补录不算数 —— 补录的视频证明不了当时是谁签的字。',
+      go:'开始双录', done:'双录已开始 · 录音录像中'},
+    '身份核验': {ic:'g-verify', sub:'依据核验 · 三要素',
+      lead:'证件、人脸、手机号三项全过，才算核验完成。',
+      rows:[['证件','✓ 居民身份证 · 校验通过'],['人脸','✓ 相似度 0.92'],['手机号','✓ 已验证 · 尾号 8891']],
+      note:'缺一项是「部分核验」，不能写成已核验 —— 报表上这两个词差一个字，责任差一整层。',
+      go:'重新核验', done:'三要素已复验 · 3/3 通过'},
+    '授权与双录': {ic:'g-rule', sub:'依据核验 · 待授权 3 件',
+      lead:'3 件待授权，其中 2 件双录齐，1 件缺双录 —— 缺的那件不能批。',
+      rows:[['待授权','3 件 · 金额 5.2 / 8.0 / 12.0 万'],['双录齐','2 件'],['双录缺','1 件 · 8.0 万那笔']],
+      note:'双录没齐就授权，责任落在授权人头上 —— 不是落在办业务的人头上。',
+      go:'逐件查看', done:'已查看 3 件 · 1 件标记「双录缺失」'},
+    '留痕': {ic:'g-trace', sub:'依据核验 · 今日记录',
+      lead:'今天做过的事都在这儿，谁、几点、做了什么，一条一条。',
+      rows:[['15:47','打印凭条 · 陈××'],['15:44','双录 · 陈×× · 已上传'],['15:31','读卡 + 人脸 · 陈××']],
+      note:'留痕只记做过什么，不记客户说了什么 —— 客户的话进会话，不进台账。',
+      go:'导出今日留痕', done:'已导出 · 今日 12 条'},
+    '打印凭条': {ic:'g-print', sub:'工具 · 凭条打印',
+      lead:'打印机就绪，今日打了 12 张，上一次 15:47。',
+      rows:[['打印机','03 号台 · 就绪'],['今日','12 张'],['上次','15:47 · 陈×× 收寄凭条']],
+      note:'凭条是给客户的凭证。打错了要重打并留痕，不能悄悄撕掉 —— 撕掉的凭条和没打过的凭条，客户分不清，系统也分不清。',
+      go:'打印凭条', done:'已打印 · 第 13 张'},
+    '凭证扫描': {ic:'g-scan', sub:'工具 · 扫描队列',
+      lead:'队列里 3 张待扫，都是今天的开户资料。',
+      rows:[['待扫','3 张 · 开户资料'],['今日已扫','9 张'],['设备','扫描仪 · 就绪']],
+      note:'扫描件进档案，不进会话 —— 会话关了就找不到了。归档和聊天是两条路。',
+      go:'开始扫描', done:'已扫描 3 张 · 归入开户档案'},
+    '模型观测': {ic:'g-eye', sub:'工具 · 模型调用记录',
+      lead:'今天模型被调用 3 次，都是查依据，没有一次往外发数据。',
+      rows:[['调用','3 次 · 全部完成'],['用途','查规矩 2 · 拼话术 1'],['外发','0 次']],
+      note:'观测看的是模型做了什么，不是模型想了什么 —— 想什么看不到，也不该假装看得到。',
+      go:'查看调用明细', done:'已展开 3 条调用明细'}
+  },
+  P3: {
+    '受理': {ic:'g-check', sub:'叫号队列 · 受理这一笔',
+      lead:'叫到号不等于受理完 —— 受理是把「客户说的」变成「系统里的一笔」。',
+      rows:[['先做什么','核身份、问清办什么，再动手'],
+            ['材料','按业务清单逐项收，缺件当场说清补什么'],
+            ['不做什么','材料没齐就先录系统'],
+            ['做完','打印回执并当面点清']],
+      note:'受理第一步是「听清」，不是「点快」；听错了后面全是返工。',
+      go:'确认受理', done:'已受理 · 回执已打印'},
+    '材料核对': {ic:'g-list', sub:'叫号队列 · 材料核对',
+      lead:'核对是逐项打勾，不是「看一眼差不多」。',
+      rows:[['身份证件','在有效期内，人证一致'],
+            ['业务单据','客户已签字，日期与金额无涂改'],
+            ['证明材料','按业务要求收原件或复印件'],
+            ['缺件','当场列清单，不让客户跑第二趟']],
+      note:'材料核对与受理是两件事：核对管「够不够」，受理管「办不办」。',
+      go:'核对完成', done:'材料已核对 · 缺件 0'},
+    '验视': {ic:'g-eye', sub:'收寄前 · 网点今日 63 件',
+      lead:'63 件逐件验视，可疑 2 件，1 件已转台席复核。',
+      rows:[['已验视','63 件 · 逐件，不是抽查'],
+            ['可疑','2 件 · 封条破损 1 · 内件与申报不符 1'],
+            ['禁寄','0 件'],
+            ['待复核','1 件 · 等台席确认后才能封口']],
+      note:'验视是收寄前的必经一步。客户不同意验视的，当面说明缘由并记录，不私了。',
+      go:'查看待复核那 1 件', done:'已转台席复核 · 记录已留'},
+    '称重计费': {ic:'g-coins', sub:'收寄 · 按重量计费',
+      lead:'称重决定资费，63 件的重量都进了系统。',
+      rows:[['已称重','63 件'],['续重计费','14 件 · 超 1 公斤部分'],
+            ['轻小件','9 件 · 按件计'],['称重差异','0 件']],
+      note:'公斤和件是两种单位，不加在一起。称重与系统不一致时以系统为准，差异原因写进备注。',
+      go:'核对重量差异', done:'已核对 · 无差异'},
+    '打印面单': {ic:'g-print', sub:'收寄 · 一单一号',
+      lead:'面单跟着单号走，一单一号。',
+      rows:[['已打','56 张 · 已收寄件'],['补打','2 张 · 均带原单号'],
+            ['作废','1 张 · 已留痕'],['重复打印','0 张']],
+      note:'补打必须带原单号；作废要留痕。同一单号打两次，系统只认第一次 —— 别让客户拿两张一样的。',
+      go:'打印下一张', done:'已打印 · 单号已记'},
+    '保价': {ic:'g-shield', sub:'收寄 · 按声明价值收费',
+      lead:'保价按声明价值收费，不按实际损失赔。',
+      rows:[['保价件','3 件'],['声明价值','合计 4,600 元 · 逐件登记'],
+            ['单件上限','2,000 元 · 未超限'],['未保价','60 件 · 按邮资倍数赔']],
+      note:'没保价的件按邮资倍数赔，界面上别写「全额赔付」；声明价值与实物不符的，以验视记录为准。',
+      go:'办理保价', done:'已保价 · 3 件'},
+    '管户': {ic:'g-user', sub:'客户 · 该谁管',
+      lead:'管户看「该谁管」，不是「办了几笔」。',
+      rows:[['本台席','24 件 · 03 号台'],['网点','63 件 · 四台席'],
+            ['代办联系人','9 位 · 按人计'],['待跟进','2 位 · 材料未齐']],
+      note:'件数归件数、人数归人数，两个数不相加。客户离开本台席后，管户关系留在网点。',
+      go:'查看管户名单', done:'已查看 · 9 位'},
+    '结算缴款': {ic:'g-check', sub:'日终 · 当日清',
+      lead:'当日受理的款项当日清，不平先对账。',
+      rows:[['现金','待清点 · 与尾箱对'],['扫码','已入账 · 与流水对'],
+            ['核对要点','现金 ＝ 尾箱 · 扫码 ＝ 流水'],['双人复核','1 人 · 未完成']],
+      note:'现金和扫码分开记，相加前先各自对账。不平先查监控再看记录，别先改记录。',
+      go:'开始结算', done:'已结算 · 待双人复核'},
+    '业务补录': {ic:'g-resume', sub:'补救通道 · 不是常规',
+      lead:'补录是补救，不是常规通道。',
+      rows:[['今日补录','2 笔'],['原因','系统超时未记录'],
+            ['已双人确认','1 笔'],['跨日补录','0 笔 · 走差错处理']],
+      note:'补录要写原因和经办人。跨日不补录，走差错处理流程。',
+      go:'提交补录', done:'已补录 · 已双人确认'},
+    '验单处理': {ic:'g-flag', sub:'收寄后 · 4 件在办',
+      lead:'验单要有照片和重量记录，口头说的不作数。',
+      rows:[['在办验单','4 件'],['内件短少','1 件'],['破损','1 件'],['逾误','2 件']],
+      note:'处理结果要给客户一句明白话。责任未定前，别在界面上写「已赔付」。',
+      go:'处理验单', done:'已处理 · 4 件'},
+    '操作留痕': {ic:'g-trace', sub:'今日 · 谁、几点、对哪一件',
+      lead:'今天做过的动作都在这儿。',
+      rows:[['09:02','开班 · 03 号台'],['09:15','验视 · 首件'],
+            ['15:31','缴款 · 1 笔'],['15:47','补录 · 2 笔']],
+      note:'留痕只记动作，不记客户说了什么。客户的话进会话，不进台账。',
+      go:'导出今日留痕', done:'已导出 · 4 条'}
+  },
+  P4: {
+    '识别客户': {ic:'g-scan', sub:'接入身份 · 扫证 / 扫码认人',
+      lead:'先认人、再谈业务 —— 不让客户自证身份。',
+      rows:[['扫码','取号单或手机上的二维码'],
+            ['扫证','身份证贴读卡区，字段自动带入'],
+            ['认出来之后','预约客户直接引导到台席；到店客户按业务分流'],
+            ['认不出','转人工核验，不猜、不代填']],
+      note:'识别是「认出他是谁」，不是「查到他要办什么」—— 后者要本人授权。',
+      go:'开始识别', done:'已识别 · 已引导至台席'},
+    '为客户取号': {ic:'g-seat', sub:'厅堂 · 代客取号',
+      lead:'客户不会用取号机，就由我们代取 —— 取的是号，不是替他排队。',
+      rows:[['问清','办什么业务，决定取哪一类号'],
+            ['代取','在取号机上选业务类型，打印号单'],
+            ['交代','等候几位、大概多久、到哪个台席'],
+            ['特殊情况','老弱孕残优先号，需在旁边写明缘由']],
+      note:'代取号要当着客户面做，号单交到客户手上 —— 替人取号不能变成替人办事。',
+      go:'确认取号', done:'已代取号 · 已告知等候时长'},
+    '查看预约': {ic:'g-cal', sub:'厅堂 · 今日预约',
+      lead:'预约名单要提前看，不能等客户到了才翻。',
+      rows:[['看什么','几点、谁、办什么、材料齐不齐'],
+            ['提前做','材料不齐的提前打电话说明'],
+            ['到场后','核对预约号，直接引导到预留台席'],
+            ['爽约','登记原因，不追究、但要看是不是提醒没到位']],
+      note:'预约的价值在「提前」两个字 —— 当天才看的预约，只是一张名单。',
+      go:'查看今日预约', done:'已查看今日预约名单'},
+    '厅堂巡检': {ic:'g-verify', sub:'厅堂 · 定时巡检',
+      lead:'巡检是定时走一圈，不是等出事再去看。',
+      rows:[['看排队','队伍长度、等候时长，超过阈值加开台席'],
+            ['看设备','取号机、自助机、叫号屏是否正常'],
+            ['看物料','宣传折页、填单台、笔是否齐'],
+            ['看通道','无障碍通道与消防通道不被占用']],
+      note:'巡检记录要写「发现了什么、当场怎么处置」；只写「正常」等于没巡。',
+      go:'完成巡检', done:'巡检完成 · 异常 0 项'},
+    '扫码接入': {ic:'g-scan', sub:'厅堂 · 到店两个来源',
+      lead:'客户扫码后进队列等叫号，取号机是另一个来源。',
+      rows:[['今日扫码','38 人'],['窗口取号','53 人'],
+            ['合计到店','91 人'],['未取号','0 人']],
+      note:'91 ＝ 扫码 38 ＋ 取号 53，两个来源不能互相替代。有人不取号直接问事的，服务照给，不计入口径。',
+      go:'打开接入码', done:'已打开接入码'},
+    '叫号': {ic:'g-bell', sub:'厅堂 · 叫的是号不是人',
+      lead:'一号一台席，按队列不按脸熟。',
+      rows:[['当前等待','4 位'],['已叫','87 号'],
+            ['平均等候','6.2 分钟'],['最长等候','11 分钟']],
+      note:'VIP 与轮椅客户有优先通道，界面要能看见是被什么规则提前的。',
+      go:'叫下一位', done:'已叫号 · A022'},
+    '新建会话': {ic:'g-plus', sub:'会话 · 带工号',
+      lead:'大堂新建的会话也带工号，经办人写自己。',
+      opts:['客户咨询（不办业务）','取号 / 叫号相关','投诉与建议','预约到店核对'],
+      note:'别用别人的身份建会话 —— 出了事查不到你。',
+      go:'新建会话', done:'已新建会话'},
+    '接管': {ic:'g-take', sub:'会话 · 要留两个名字',
+      lead:'接管留两个名字：原经办和接管人。',
+      rows:[['可接管','2 个'],['李×× · 咨询','挂起 9 分 · 原经办 自己'],
+            ['王×× · 询问','挂起 4 分']],
+      note:'只写接管人，责任就断了。两条名字都要落在记录里。',
+      go:'接管', done:'已接管'},
+    '断点续办': {ic:'g-resume', sub:'会话 · 接原单',
+      lead:'接着原单做，不另开。',
+      rows:[['断点','1 条'],['陈×× · 材料缺','停在「等补充」· 27 分']],
+      note:'另开一单等于让她重说一遍。大堂的断点多是「等材料」，续办前先看她带没带齐。',
+      go:'续办', done:'已续办 · 1 条'},
+    '转台席': {ic:'g-transfer', sub:'厅堂 · 看能不能接',
+      lead:'转台席看能不能接，不是看谁空。',
+      rows:[['今日转台席','4 次'],['成功','3 次'],['被退','1 次 · 业务不对口'],
+            ['柜面','4 台 · 全开'],['营业','3 台 · 开 2']],
+      note:'转错了要再转一次，客户被问两遍同样的问题。转之前先问清她办什么。',
+      go:'转台席', done:'已转台席'},
+    '叫号管理': {ic:'g-cog', sub:'厅堂 · 规则归大堂',
+      lead:'叫号规则归大堂管，改规则要说清为什么。',
+      rows:[['队列','3 条 · 柜面 / 营业 / 理财'],['预警阈值','等候 10 分钟提示'],
+            ['今日触发','2 次 · 均已分流'],['台席配比','按台席配，不按人头配']],
+      note:'改叫号规则影响所有人，改前留一句依据。别为了自己这边好看，把队列挪给别的台席。',
+      go:'查看规则', done:'已查看 · 3 条队列'},
+    '引导规则': {ic:'g-rule', sub:'厅堂 · 默认路径',
+      lead:'规则是默认路径，不是铁律；客户有特殊情况要能绕。',
+      rows:[['今日引导','39 人'],['自助','28 人 · 简单业务'],['柜台','11 人 · 需面签'],
+            ['引导不清投诉','3 次 · 记在大堂名下']],
+      note:'引导不清的投诉记在大堂名下，不记在网点名下。规则挡人的时候，绕一下比硬劝好。',
+      go:'查看规则', done:'已查看'},
+    '留痕': {ic:'g-trace', sub:'今日 · 谁、几点、对哪个客户',
+      lead:'大堂的动作也留痕。',
+      rows:[['09:05','开班 · 厅堂'],['09:30','巡视 · 第 1 次'],
+            ['14:00','分流 · 12 人'],['16:10','评价器 · 收到 3 条']],
+      note:'留痕只记动作不记客户说了什么；客户的意见进会话和工单。',
+      go:'导出留痕', done:'已导出'},
+    '打印凭条': {ic:'g-print', sub:'厅堂 · 只打引导类',
+      lead:'大堂打的是引导凭条和预约回执，不是业务回单。',
+      rows:[['今日打印','14 张'],['引导凭条','9 张'],['预约回执','5 张'],['业务回单','0 张']],
+      note:'业务回单在台席打，大堂打了反而多一份纸。凭条上不带客户证件号。',
+      go:'打印', done:'已打印'},
+    '评价器': {ic:'g-flag', sub:'今日 · 客户按的',
+      lead:'评价是客户按的，不是你按的。',
+      rows:[['今日收到','3 条'],['好评','2 条'],['建议','1 条 · 等候久'],['代按','0 条']],
+      note:'评价不能代按、不能劝改。一条建议比十条好评有用 —— 别只把好的截图发出去。',
+      go:'查看评价', done:'已查看 · 3 条'},
+    '模型观测': {ic:'g-eye', sub:'今日 · 建议准不准',
+      lead:'观测看的是建议准不准，不是图省事。',
+      rows:[['今日建议','17 条'],['采纳','12 条'],['未采纳','5 条 · 与现场不符'],['未写原因','0 条']],
+      note:'未采纳的 5 条要写原因，模型才能改。照单全收等于没观测。',
+      go:'查看观测', done:'已查看'}
+  }
+  };
+  function openHallAct(name, btn) {
+    var a = (HALL_ACTS[cur.post] || {})[name];
+    if (!a) return false;
+    var h = '';
+    if (a.lead) h += '<div class="qd-lead">' + a.lead + '</div>';
+    if (a.rows) a.rows.forEach(function (r) {
+      h += '<div class="qd-row"><b>' + r[0] + '</b><span>' + r[1] + '</span></div>';
+    });
+    if (a.opts) {
+      h += '<div class="qd-opt">' + a.opts.map(function (o, i) {
+        return '<label><input type="radio" name="qdOpt"' + (i === 0 ? ' checked' : '') + '>' + o + '</label>';
+      }).join('') + '</div>';
+    }
+    if (a.note) h += '<div class="qd-note">' + a.note + '</div>';
+    openQd(name, a.sub || '', a.ic, h, { go: a.go || '确定', done: a.done, btn: btn });
+    return true;
+  }
+  window.openHallAct = openHallAct;
   document.addEventListener('keydown', function (e) {
     if (e.key === 'Escape') closeQd();
   });
@@ -3757,7 +4157,8 @@ body.rb-off .ribbon{ height:0; min-height:0; overflow:hidden; }
           return;
         }
         var go = window.HALL_GO && window.HALL_GO[cur.role] && window.HALL_GO[cur.role][kn];
-        if (go) { location.href = '二级页/' + go; return; }
+        if (go) { location.href = window.PAGE_BASE + go; return; }
+        if (openHallAct(kn, rgi)) return;
         toast('功能区「' + kn + '」还没有单独的页面，留在当前岗的办理步骤里');
         return;
       }
@@ -3992,6 +4393,7 @@ body.rb-off .ribbon{ height:0; min-height:0; overflow:hidden; }
 
   function start(role, no) {
     cur = P[role];
+    if (cur) cur.post = role;
     if (no) {
       cur.no = no;
       cur.nm = window.HallViews && HallViews.staffName ? HallViews.staffName(no) : no;
@@ -4018,18 +4420,15 @@ body.rb-off .ribbon{ height:0; min-height:0; overflow:hidden; }
   }
 
   /* ========== ⑦ 登录门：五合一的入口是登录，不是首页 ========== */
-  /* 只放「有工作台页面」的五个岗位。1002/1010/1018/1020 有岗无页 ——
-     让它们进 P2/P5 的视图，会把别人的名字和台席安在自己头上，那是造假数据，不做。 */
+  /* 进门看 account_state=enter 且有壳岗位。无页面不进门，投票另算。 */
   var LOGIN = {};
-  var NO_PAGE = { '1020': '该岗位暂无工作台' };
+  var NO_PAGE = {};
   function syncDoor() {
-    var keep = NO_PAGE['1020'];
     LOGIN = {};
-    NO_PAGE = { '1020': keep };
+    NO_PAGE = {};
     HallViews.staffAll().forEach(function (s) {
-      if (HallViews.voterRow(s)) LOGIN[s.no] = { role: s.role, site: s.site || '' };
-      else if (s.role === 'P5' && s.enter === true) LOGIN[s.no] = { role: s.role, site: s.site || '' };
-      else NO_PAGE[s.no] = s.role ? '未定' : '后端无角色';
+      if (s.enter && s.role) LOGIN[s.no] = { role: s.role, site: s.orgCode || '' };
+      else NO_PAGE[s.no] = s.acct === 'no_page' ? '该岗位暂无工作台' : (s.acct === 'refuse' ? '拒绝登录' : '后端无角色');
     });
     if ($('lgChips')) renderLoginChips();
   }
@@ -4438,24 +4837,20 @@ body.rb-off .ribbon{ height:0; min-height:0; overflow:hidden; }
   var KEY = 'vfm_v1';
   var ME = CFG.me.no, ISM = CFG.role === 'manager';
 
-  /* 全支局七人；page=1 表示这版有独立页面、能自己答复 */
-  var ALL = [
-    {no:'1001', name:'王××', post:'支局经理', page:1},
-    {no:'1002', name:'钱××', post:'综合柜员', page:0},
-    {no:'1003', name:'赵××', post:'普通柜员', page:1},
-    {no:'1004', name:'孙××', post:'大堂经理', page:1},
-    {no:'1010', name:'褚××', post:'综合柜员', page:0},
-    {no:'1017', name:'秦××', post:'邮政营业', page:1},
-    {no:'1018', name:'尤××', post:'理财经理', page:0}
-  ];
+  function roster() {
+    var live = (window.HallViews && HallViews.staffAll) ? HallViews.staffAll() : [];
+    return live.filter(function (s) { return s.orgCode === 'df'; }).map(function (s) {
+      return { no: s.no, name: s.name, post: s.title || '', noPage: s.acct === 'no_page' };
+    });
+  }
+  function byNo(no){ var rows = roster(); for(var i=0;i<rows.length;i++) if(rows[i].no===no) return rows[i]; return null; }
+  function nm(no){ var p=byNo(no); return p ? p.name : no; }
+  function po(no){ var p=byNo(no); return p ? p.post : ''; }
+  function hasPage(no){ var p=byNo(no); return !!(p && !p.noPage); }
+  function pool(){ return roster().filter(function(p){ return p.no !== ME; }); }
   var TY = {vote:'投票', act:'活动', perf:'业绩补录', say:'对话', link:'岗位联动', ask:'请示', tell:'告知'};
   var T_M = ['vote','act','perf','say'], T_S = ['link','ask','tell'];
 
-  function byNo(no){ for(var i=0;i<ALL.length;i++) if(ALL[i].no===no) return ALL[i]; return null; }
-  function nm(no){ var p=byNo(no); return p ? p.name : no; }
-  function po(no){ var p=byNo(no); return p ? p.post : ''; }
-  function hasPage(no){ var p=byNo(no); return !!(p && p.page); }
-  function pool(){ return ALL.filter(function(p){ return p.no !== ME; }); }
   function pad(n){ return (n < 10 ? '0' : '') + n; }
   function nowStr(){ var d = new Date(); return (d.getMonth()+1) + '-' + d.getDate() + ' ' + pad(d.getHours()) + ':' + pad(d.getMinutes()); }
   function esc(s){ return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
@@ -4593,7 +4988,7 @@ body.rb-off .ribbon{ height:0; min-height:0; overflow:hidden; }
     return ps.map(function(p){
       var on = form.to.indexOf(p.no) >= 0 ? ' checked' : '';
       return '<label><input type="checkbox" value="' + p.no + '"' + on + '>' + p.name + ' · ' + p.post
-           + (p.page ? '' : '<i>默认同意</i>') + '</label>';
+           + (p.noPage ? '<i>系统代置</i>' : '') + '</label>';
     }).join('');
   }
   function autoCount(){
@@ -4633,8 +5028,7 @@ body.rb-off .ribbon{ height:0; min-height:0; overflow:hidden; }
     var n = autoCount();
     var base = '拒绝要写理由 —— 回传的是「谁 ＋ 为什么」，不是一个数字。';
     if(!n) return base;
-    return '其中 <b>' + n + '</b> 个岗位这版还没有独立页面，发送时按<b>默认同意</b>记（不占你的等待）——'
-         + '等格温把页面补齐，这条会自动变成真人答复。';
+    return '其中 <b>' + n + '</b> 个岗位没有页面。发给他们时由系统代置默认同意，并标明是系统代置。';
   }
   function readForm(){
     form.t = (document.getElementById('vfmT') || {}).value || '';
@@ -4670,7 +5064,7 @@ body.rb-off .ribbon{ height:0; min-height:0; overflow:hidden; }
     /* 没有独立页面的岗位 → 默认同意，别让流程卡在「未答」 */
     it.to.forEach(function(no){
       if(!hasPage(no)){
-        it.replies[no] = {v:'agree', auto:1, why:'未建页 · 默认同意', at:created};
+        it.replies[no] = {v:'agree', auto:1, why:'系统代置 · 默认同意', at:created};
         it.auto.push(no);
       }
     });
@@ -4739,7 +5133,7 @@ body.rb-off .ribbon{ height:0; min-height:0; overflow:hidden; }
            + '<span class="po">' + po(no) + '</span>'
            + '<span class="vv ' + (!p ? 'vfm-wait' : p.v === 'agree' ? 'vfm-ok' : 'vfm-no') + '">'
            + (!p ? '未答' : p.v === 'agree' ? '同意' : '拒绝') + '</span>'
-           + '<span class="why">' + (p ? (p.auto ? '<b>默认同意</b> · 该岗位暂无页面'
+           + '<span class="why">' + (p ? (p.auto ? '<b>系统代置 · 默认同意</b>'
                                                   : ((p.why ? esc(p.why) + ' · ' : '') + p.at))
                                         : (it.status === 'open' ? '待答复' : '到期记弃权')) + '</span></div>';
       });

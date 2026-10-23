@@ -5,6 +5,7 @@
 
 from app.assembly.roles import ROLE_LABELS
 
+# 2026-10-20 曾把保安记成 refuse（不建员工账号）。2026-10-23 确认：保安在岗、无页面，投票默认同意。
 GUARD_REASON = "保安岗不建员工账号"
 
 # 岗位名 → 后端 role_code。系统管理员是壳上的叫法，库里的标签是管理员。
@@ -35,7 +36,7 @@ LOGIN = {
     "P4": {"name": "大堂经理", "account": "enter"},
     "P5": {"name": "理财经理", "account": "no_page", "note": "本版并入代理金融台，未单独成页"},
     "P6": {"name": "综合柜员", "account": "no_page", "note": "本版并入代理金融台，未单独成页"},
-    "P7": {"name": "保安", "account": "refuse", "note": GUARD_REASON},
+    "P7": {"name": "保安", "account": "no_page", "note": "无页面岗位，在岗，投票默认同意"},
 }
 
 # 组织花名册。这里的 P0 是职能，不是登录页上的管理员。P7 不写入 post.role_code。
@@ -47,7 +48,7 @@ ROSTER = {
     "P4": {"name": "大堂经理", "account": "enter"},
     "P5": {"name": "理财经理", "account": "no_page", "note": "本版并入代理金融台，未单独成页"},
     "P6": {"name": "综合柜员", "account": "no_page", "note": "本版并入代理金融台，未单独成页"},
-    "P7": {"name": "保安", "account": "refuse", "note": GUARD_REASON},
+    "P7": {"name": "保安", "account": "no_page", "note": "无页面岗位，在岗，投票默认同意"},
     "ADM": {"name": "系统管理员", "account": "enter"},
 }
 

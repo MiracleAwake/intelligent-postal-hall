@@ -7,6 +7,7 @@ from app.storage.people import connect
 _SEED = (
     {
         "id": "a-zhou",
+        "cid": "c009",
         "name": "周××",
         "line": "代理金融",
         "intent": "活期转定期 · 5 万元",
@@ -18,6 +19,7 @@ _SEED = (
     },
     {
         "id": "a-feng",
+        "cid": "c010",
         "name": "冯××",
         "line": "政务代办",
         "intent": "交管补换领行驶证",
@@ -44,9 +46,13 @@ def ensure_appointments(path=None) -> None:
                  status TEXT NOT NULL,
                  roles TEXT NOT NULL,
                  actual TEXT NOT NULL DEFAULT '',
-                 reminded INTEGER NOT NULL DEFAULT 0
+                 reminded INTEGER NOT NULL DEFAULT 0,
+                 cid TEXT NOT NULL DEFAULT ''
                )"""
         )
+        cols = {r[1] for r in conn.execute("PRAGMA table_info(appointment)").fetchall()}
+        if "cid" not in cols:
+            conn.execute("ALTER TABLE appointment ADD COLUMN cid TEXT NOT NULL DEFAULT ''")
         for row in _SEED:
             conn.execute(
                 """INSERT OR IGNORE INTO appointment
@@ -56,6 +62,10 @@ def ensure_appointments(path=None) -> None:
                     row["id"], row["name"], row["line"], row["intent"], row["slot"],
                     row["source"], row["status"], row["roles"], row.get("actual") or "",
                 ),
+            )
+            conn.execute(
+                "UPDATE appointment SET cid = ? WHERE id = ? AND cid = ''",
+                (row["cid"], row["id"]),
             )
         conn.commit()
     finally:
@@ -73,6 +83,7 @@ def _public(row: sqlite3.Row) -> dict:
         "status": row["status"],
         "actual": row["actual"],
         "reminded": bool(row["reminded"]),
+        "cid": row["cid"],
     }
 
 
