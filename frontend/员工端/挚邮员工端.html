@@ -2147,7 +2147,7 @@ body.rb-off .ribbon{ height:0; min-height:0; overflow:hidden; }
 <script src="hall-wire.js"></script>
 <script src="hall-go.js"></script>
 <script src="hall-live.js"></script>
-<script src="hall-views.js?v=abs4"></script>
+<script src="hall-views.js?v=rule4"></script>
 <script>
 /* ============================================================
    10 员工端 · 五合一壳
@@ -2158,17 +2158,17 @@ body.rb-off .ribbon{ height:0; min-height:0; overflow:hidden; }
   'use strict';
 
   /* ========== ① 唯一家：数据 ========== */
-  /* 名册与在岗：全站只此一份，徽标、KPI、状态条都从这里算 */
-  var STAFF = [
-    ['王××', 'P1', '在岗', '支局经理', '1001'],
-    ['尤××', 'P5', '在岗', '理财经理', '1018'],
-    ['褚××', 'P6', '在岗', '综合柜员', '1010'],
-    ['赵××', 'P2', '在岗', '普通柜员（代理金融）', '1003'],
-    ['钱××', 'P2', '在岗', '综合柜员', '1002'],
-    ['秦××', 'P3', '在岗', '邮政营业', '1017'],
-    ['孙××', 'P4', '在岗', '大堂经理', '1004'],
-    ['施××', 'P7', '在岗', '保安', '1020']
-  ];
+  /* 名册与在岗：从 /api/staff 来，经 hall-views 的同一份名册。徽标、KPI、状态条都从这里算。 */
+  var STAFF = [];
+  function syncRoster() {
+    var rows = window.HallViews && HallViews.staffAll ? HallViews.staffAll() : [];
+    STAFF = rows.map(function (s) {
+      var st = s.acct === 'refuse' ? '拒绝' : (s.acct === 'no_page' ? '无页' : (s.acct === 'enter' ? '在岗' : '未定'));
+      return [s.name, s.role || '后端无角色', st, s.title || '', s.no];
+    });
+  }
+  window.syncRoster = syncRoster;
+  syncRoster();
 
   var SITE = {
     name: '东风路支局', code: 'df', org: '东风路支局 · 综合营业厅',
@@ -4020,19 +4020,21 @@ body.rb-off .ribbon{ height:0; min-height:0; overflow:hidden; }
   /* ========== ⑦ 登录门：五合一的入口是登录，不是首页 ========== */
   /* 只放「有工作台页面」的五个岗位。1002/1010/1018/1020 有岗无页 ——
      让它们进 P2/P5 的视图，会把别人的名字和台席安在自己头上，那是造假数据，不做。 */
-  var LOGIN = {
-    '1001': { role: 'P1', site: 'df' },
-    '1002': { role: 'P2', site: 'df' },
-    '1003': { role: 'P2', site: 'df' },
-    '1017': { role: 'P3', site: 'df' },
-    '1004': { role: 'P4', site: 'df' },
-    '9001': { role: 'P5', site: 'hq' }
-  };
-  var NO_PAGE = {
-    '1010': '后端无角色',
-    '1018': '后端无角色',
-    '1020': '该岗位暂无工作台'
-  };
+  var LOGIN = {};
+  var NO_PAGE = { '1020': '该岗位暂无工作台' };
+  function syncDoor() {
+    var keep = NO_PAGE['1020'];
+    LOGIN = {};
+    NO_PAGE = { '1020': keep };
+    HallViews.staffAll().forEach(function (s) {
+      if (HallViews.voterRow(s)) LOGIN[s.no] = { role: s.role, site: s.site || '' };
+      else if (s.role === 'P5' && s.enter === true) LOGIN[s.no] = { role: s.role, site: s.site || '' };
+      else NO_PAGE[s.no] = s.role ? '未定' : '后端无角色';
+    });
+    if ($('lgChips')) renderLoginChips();
+  }
+  window.syncDoor = syncDoor;
+  syncDoor();
   var PW = '123456';   /* 原型口令，写死是故意的：不连工号库 */
 
   function lgErr(msg) {
@@ -4060,7 +4062,7 @@ body.rb-off .ribbon{ height:0; min-height:0; overflow:hidden; }
   function renderLoginChips() {
     var box = $('lgChips');
     if (!box) return;
-    box.innerHTML = ['1001', '1002', '1003', '1017', '1004', '9001'].map(function (no) {
+    box.innerHTML = Object.keys(LOGIN).map(function (no) {
       var m = MANUAL[LOGIN[no].role];
       var nm = window.HallViews && HallViews.staffName ? HallViews.staffName(no) : no;
       return '<button type="button" class="chip" data-no="' + no + '">' +
@@ -4121,11 +4123,7 @@ body.rb-off .ribbon{ height:0; min-height:0; overflow:hidden; }
     }
     var st = LOGIN[no];
     if (!st) { lgErr('工号 ' + no + ' 不在册，请核对（原型名册 8 人）'); return; }
-    if (st.site !== site) {
-      lgErr(site === 'df' ? '该工号属区公司域 —— 请先把「登录单位」切到东风区分公司'
-                          : '该工号属网点域 —— 请先把「登录单位」切到东风路支局');
-      return;
-    }
+    if (!st.site) { lgErr('后端未返回站点'); return; }
     if (pw !== PW) { lgErr('口令不正确（原型口令 123456）'); $('lgPw').focus(); return; }
     writeSession(sessionOf(st.role, no));
     hideLogin();

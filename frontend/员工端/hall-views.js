@@ -20,19 +20,24 @@
   var ROLE_FROM_API = { P3: 'P1', P1: 'P2', P2: 'P3', P4: 'P4', P5: 'P5' };
   function toShellRole(code) { return ROLE_FROM_API[code] || ''; }
   var STAFF = [
-    { no: '1001', name: '王××', role: 'P1', st: '在岗', gap: '' },
-    { no: '1003', name: '赵××', role: 'P2', st: '在岗', gap: '' },
-    { no: '1017', name: '秦××', role: 'P3', st: '在岗', gap: '' },
-    { no: '1004', name: '孙××', role: 'P4', st: '在岗', gap: '' },
-    { no: '9001', name: '区管理员', role: 'P5', st: '在岗', gap: '' },
-    { no: '1002', name: '钱××', role: '', st: '在岗', gap: '后端无角色' },
-    { no: '1010', name: '褚××', role: '', st: '在岗', gap: '后端无角色' },
-    { no: '1018', name: '尤××', role: '', st: '在岗', gap: '后端无角色' },
-    { no: '1022', name: '施××', role: '', st: '拒绝', gap: '后端无角色' }
+    { no: '1001', name: '王××', role: 'P1', st: '在岗', gap: '', enter: true, title: '支局经理', acct: 'enter' },
+    { no: '1003', name: '赵××', role: 'P2', st: '在岗', gap: '', enter: true, title: '普通柜员', acct: 'enter' },
+    { no: '1017', name: '秦××', role: 'P3', st: '在岗', gap: '', enter: true, title: '邮政营业', acct: 'enter' },
+    { no: '1004', name: '孙××', role: 'P4', st: '在岗', gap: '', enter: true, title: '大堂经理', acct: 'enter' },
+    { no: '9001', name: '区管理员', role: 'P5', st: '在岗', gap: '', enter: true, title: '管理员', acct: 'enter' },
+    { no: '1002', name: '钱××', role: '', st: '在岗', gap: '后端无角色', enter: false, title: '综合柜员', acct: 'no_page' },
+    { no: '1010', name: '褚××', role: '', st: '在岗', gap: '后端无角色', enter: false, title: '综合柜员', acct: 'no_page' },
+    { no: '1018', name: '尤××', role: '', st: '在岗', gap: '后端无角色', enter: false, title: '理财经理', acct: 'no_page' },
+    { no: '1022', name: '施××', role: '', st: '拒绝', gap: '后端无角色', enter: false, title: '保安', acct: 'refuse' }
   ];
   var OFF = [];
+  /* 谁能投票：本网点在岗员工（含无页面岗位，后台默认同意），减本笔经办人；非本网点角色不参与。 */
   function voterRow(s) {
-    return s.st === '在岗' && s.no !== '1022' && s.no !== '9001' && s.no !== '1010' && s.no !== '1018';
+    return s.acct !== 'refuse' && s.st !== '拒绝' && !!s.role && s.role !== 'P5';
+  }
+  function agreeNo(no) {
+    var s = STAFF.filter(function (x) { return x.no === no; })[0];
+    return !!(s && voterRow(s) && s.acct === 'no_page');
   }
   var VOTERS = STAFF.filter(voterRow).map(function (s) { return s.no; });
   var CH_CLS = { '存量维护': 'stock', '走访新拓': 'new', '电联唤醒': 'call', '厅堂转介': 'rec' };
@@ -71,7 +76,13 @@
   }
   function isMine() { return SCOPE === 'mine'; }
   function scopeRows() { return isMine() ? PERF.filter(function (r) { return byOf(r) === meNo(); }) : PERF; }
-  function needOf(r) { return VOTERS.filter(function (n) { return n !== byOf(r); }).length; }
+  function poolOf(r) { return VOTERS.filter(function (n) { return n !== byOf(r); }); }
+  function needOf(r) { return poolOf(r).length; }
+  function poolSay(r) {
+    var n = poolOf(r).length;
+    if (VOTERS.indexOf(byOf(r)) >= 0) return VOTERS.length + ' 人可投票，扣掉经办人是 ' + n + ' 票';
+    return VOTERS.length + ' 人可投票，经办人不在名单，这一笔不扣，是 ' + n + ' 票';
+  }
   function votesOf(r) { return r.v || (r.v = []); }
   function rejsOf(r) { return r.rj || (r.rj = []); }
   function stOf(r) {
@@ -126,6 +137,8 @@
       if (byOf(r) === '1002' && Number(r.a) === 10) r.v = pool.filter(function (n) { return n !== '1003'; }).slice(0, 1);
       else if (r.vn >= need) r.v = pool.slice();
       else r.v = pool.filter(function (n) { return n !== meNo(); }).slice(0, r.vn);
+      pool.forEach(function (n) { if (agreeNo(n) && r.v.indexOf(n) < 0) r.v.push(n); });
+      r.agree = pool.filter(agreeNo);
       r.rj = r.rj || [];
     });
   }
@@ -571,8 +584,7 @@
           (mineL[0].u === 'piece' ? sumOf(mineL) + ' 件' : f1(sumOf(mineL)) + ' 万元') + '）。'
         : '今天这 ' + PERF.length + ' 条里<b>没有你经办的</b> —— 你在这页看的是全网点的账。';
       $('pfLead').innerHTML = '这一页回答「<b>今天哪几笔算到我头上、确认到哪一步了</b>」。' + mineTxt +
-        '每笔要<b>其余 ' + (VOTERS.length - 1) + ' 人全部通过</b>才算完成 —— 全网点 ' + VOTERS.length +
-        ' 人可投票，扣掉经办人自己就是 ' + (VOTERS.length - 1) + ' 票。';
+        '每笔的票池 = 能判定为本网点的在岗员工，去掉这一笔的经办人；经办人不在名单里就不减。角色空着的员工未计入。现在 ' + VOTERS.length + ' 人可投票。';
     }
 
     if(isMine()){
@@ -704,8 +716,9 @@
         }).join('') + '</table></div>';
     }).join('');
 
-    $('pfConfirmNote').innerHTML = '⭐ <b>全票才算完成</b>：' + VOTERS.length + ' 人可投票，扣掉经办人是 ' + (VOTERS.length - 1) +
-      ' 票；<b>缺一票都不算</b>。保安不建账号' + (OFF.length ? '、请假不计票' : '') + ' —— 否则永远凑不齐。<br>' +
+    $('pfConfirmNote').innerHTML = '⭐ <b>全票才算完成</b>：能判定为本网点、且在岗的员工才投票，现在 ' + VOTERS.length +
+      ' 人。非本网点角色不参与。角色空着的员工，网点归属判不了，未计入票池。每一笔的票池 = 这 ' + VOTERS.length +
+      ' 人去掉这一笔的经办人；经办人不在名单里，这一笔就是 ' + VOTERS.length + ' 票，不减。<b>缺一票都不算</b>。无页面岗位若已能判定归属，按后台默认同意计票，格子写「已投 · 默认同意」。<br>' +
       '⭐ <b>驳回不删除记录</b>：原数保留、标记「已驳回」、理由随业绩留痕，经办人更正后重新提交；' +
       '合计数不会因为驳回而消失，但「能否结算」会变。<br>' +
       '⭐ 一键确认 = <b>你一个人</b>把还没投的笔投一遍，不是替全网点点头。';
@@ -745,7 +758,7 @@
         if(d.done){
           missTxt = '<span class="dim">' + esc(d.way || '') + '</span>';
         } else if(d.draft){
-          missTxt = '<span class="miss">本人没核对，' + (VOTERS.length - 1) + ' 人无从表态</span>';
+          missTxt = '<span class="miss">本人没核对，可投票的 ' + VOTERS.length + ' 人无从表态</span>';
         } else if(d.miss && d.miss.length){
           missTxt = '<span class="miss"><span class="who">' + d.miss.slice(0, 3).join('、') +
             (d.miss.length > 3 ? ' 等' : '') + '</span></span>';
@@ -1000,7 +1013,7 @@
     if (!document.getElementById('hallViewCss')) {
       var css = document.createElement('style');
       css.id = 'hallViewCss';
-      css.textContent = '#v10ViewBar{display:flex;flex-wrap:wrap;gap:8px;margin:8px 0}#v10ViewBar button{height:32px;padding:0 12px;border-radius:8px;border:1px solid #d5ddd8;background:#fff;font-size:13px}#v10ViewBar button.on{background:#e7f3ec;border-color:#9dccb4}#v10Drawer{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:0 0 8px 14px;padding:4px 0 4px 10px;border-left:2px solid #9dccb4}#v10Drawer[hidden]{display:none}#v10Drawer .cap{font-size:12px;color:#5d6a64;margin-right:4px}#v10Drawer button{height:26px;padding:0 10px;border-radius:6px;border:1px solid #e3ebe6;background:#f7faf8;font-size:12px}#v10Drawer button.on{background:#e7f3ec;border-color:#9dccb4}#v10Hall h4{margin:12px 0 6px;font-size:13px;font-weight:600}#v10View{background:#fff;border:1px solid #e3ebe6;border-radius:12px;padding:12px;margin-bottom:12px}#v10View table{width:100%;border-collapse:collapse;font-size:13px}#v10View th,#v10View td{border-bottom:1px solid #eef2ef;padding:6px 8px;text-align:left}.kpi[data-drill]{cursor:pointer} .dr-mask{position:fixed;inset:0;background:rgba(16,24,20,.42);display:none;z-index:80} .dr-mask.on{display:block} .dr-modal{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);width:min(800px,93vw); max-height:84vh;display:none;flex-direction:column;background:#fff;border-radius:14px; box-shadow:0 26px 64px rgba(10,22,16,.30);z-index:81;overflow:hidden; font-family:inherit;color:var(--t1);text-align:left;padding:0} .dr-modal.on{display:flex} .dr-modal .dr-h{display:flex;align-items:center;gap:9px;padding:14px 18px;border-bottom:1px solid var(--bd-s)} .dr-modal .dr-h .ic-xs{width:14px;height:14px;color:var(--pg);flex:none} .dr-modal .dr-h b{font-size:14.5px;font-weight:600} .dr-modal .dr-h .sp{flex:1} .dr-modal .dr-h .mini{font-size:11.5px;color:var(--t3)} .dr-modal .dr-b{overflow:auto;padding:0 0 8px} .dr-modal .dr-f{display:flex;justify-content:flex-end;gap:9px;padding:11px 18px;border-top:1px solid var(--bd-s);background:#fafcfb} .dr-modal .dr-f button{padding:7px 15px;border-radius:9px;border:1px solid var(--bd-s);background:#fff;font-size:12.5px;cursor:pointer;color:var(--t2);font-family:inherit} .dr-modal .dr-f button.pri{background:var(--pg);border-color:var(--pg);color:#fff} .dr-modal .dr-k{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;padding:14px 18px 4px} .dr-modal .dr-k .box{border:1px solid var(--bd-s);border-radius:10px;padding:10px 13px;background:#fdfefe} .dr-modal .dr-k .box .t{font-size:11.5px;color:var(--t3)} .dr-modal .dr-k .box .v{font-size:19px;color:var(--pg-d);margin-top:4px} .dr-modal .dr-k .box .v u{font-size:11.5px;text-decoration:none;color:var(--t3);margin-left:3px} .dr-modal table{width:100%;border-collapse:collapse;font-size:12.5px} .dr-modal th{background:#f6f9f7;color:var(--t3);font-weight:500;text-align:left;padding:9px 10px;border-bottom:1px solid var(--bd-s);position:sticky;top:0;z-index:1} .dr-modal td{padding:10px;border-bottom:1px solid var(--bd-s);vertical-align:top} .dr-modal tr:last-child td{border-bottom:0} .dr-modal .mono{font-variant-numeric:tabular-nums} .dr-modal .dim{color:var(--t3);font-size:11.5px} .dr-modal .dr-st{display:inline-block;padding:1px 8px;border-radius:20px;font-size:11px;white-space:nowrap} .dr-modal .dr-st-ok{background:#e8f4ee;color:#1f7a4d} .dr-modal .dr-st-wait{background:#fdf2e4;color:#b8621b} .dr-modal .dr-lead{padding:11px 18px 2px;font-size:12px;color:#5d6a64;line-height:1.75} .dr-modal .dr-lead b{color:#1d2a25} .dr-modal .dr-note{padding:10px 18px 6px;font-size:11.5px;color:var(--t3);line-height:1.7} .dr-modal .dr-empty{padding:30px 18px;text-align:center;color:var(--t3);font-size:12.5px}.bx-mk{display:none;position:fixed;inset:0;background:rgba(10,26,18,.35);z-index:82}.bx-mk.on{display:flex;align-items:flex-start;justify-content:center;padding-top:10vh}.bx-dlg{background:#fff;border-radius:14px;width:min(640px,92vw);padding:14px}#pfMeetPool{display:flex;flex-wrap:wrap;gap:8px;margin:8px 0}#pfMeetPool button{min-width:72px;padding:8px;border:1px solid #d5ddd8;border-radius:8px;background:#fff}#pfMeetPool button.on{outline:2px solid #1f7a4d}#pfMeetPool button.mt-ok{background:#e5f6ea;border:2px solid #1f8a4c}#pfMeetPool button.mt-proxy{background:#fff4e0;border:2px dashed #e07a00}#pfMeetPool button.mt-wait{background:#fff;border:2px dotted #5d6a64}#pfMeetPool button.mt-absent{background:#fde8e8;border:2px solid #b42318;color:#8a1c14}.mt-self{flex-basis:100%;color:#5d6a64;margin-top:6px}.meet-why{color:#8a1c14;font-weight:600}.till-err{color:#b42318;font-weight:600}';
+      css.textContent = '#v10ViewBar{display:flex;flex-wrap:wrap;gap:8px;margin:8px 0}#v10ViewBar button{height:32px;padding:0 12px;border-radius:8px;border:1px solid #d5ddd8;background:#fff;font-size:13px}#v10ViewBar button.on{background:#e7f3ec;border-color:#9dccb4}#v10Drawer{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:0 0 8px 14px;padding:4px 0 4px 10px;border-left:2px solid #9dccb4}#v10Drawer[hidden]{display:none}#v10Drawer .cap{font-size:12px;color:#5d6a64;margin-right:4px}#v10Drawer button{height:26px;padding:0 10px;border-radius:6px;border:1px solid #e3ebe6;background:#f7faf8;font-size:12px}#v10Drawer button.on{background:#e7f3ec;border-color:#9dccb4}#v10Hall h4{margin:12px 0 6px;font-size:13px;font-weight:600}#v10View{background:#fff;border:1px solid #e3ebe6;border-radius:12px;padding:12px;margin-bottom:12px}#v10View table{width:100%;border-collapse:collapse;font-size:13px}#v10View th,#v10View td{border-bottom:1px solid #eef2ef;padding:6px 8px;text-align:left}.kpi[data-drill]{cursor:pointer} .dr-mask{position:fixed;inset:0;background:rgba(16,24,20,.42);display:none;z-index:80} .dr-mask.on{display:block} .dr-modal{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);width:min(800px,93vw); max-height:84vh;display:none;flex-direction:column;background:#fff;border-radius:14px; box-shadow:0 26px 64px rgba(10,22,16,.30);z-index:81;overflow:hidden; font-family:inherit;color:var(--t1);text-align:left;padding:0} .dr-modal.on{display:flex} .dr-modal .dr-h{display:flex;align-items:center;gap:9px;padding:14px 18px;border-bottom:1px solid var(--bd-s)} .dr-modal .dr-h .ic-xs{width:14px;height:14px;color:var(--pg);flex:none} .dr-modal .dr-h b{font-size:14.5px;font-weight:600} .dr-modal .dr-h .sp{flex:1} .dr-modal .dr-h .mini{font-size:11.5px;color:var(--t3)} .dr-modal .dr-b{overflow:auto;padding:0 0 8px} .dr-modal .dr-f{display:flex;justify-content:flex-end;gap:9px;padding:11px 18px;border-top:1px solid var(--bd-s);background:#fafcfb} .dr-modal .dr-f button{padding:7px 15px;border-radius:9px;border:1px solid var(--bd-s);background:#fff;font-size:12.5px;cursor:pointer;color:var(--t2);font-family:inherit} .dr-modal .dr-f button.pri{background:var(--pg);border-color:var(--pg);color:#fff} .dr-modal .dr-k{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;padding:14px 18px 4px} .dr-modal .dr-k .box{border:1px solid var(--bd-s);border-radius:10px;padding:10px 13px;background:#fdfefe} .dr-modal .dr-k .box .t{font-size:11.5px;color:var(--t3)} .dr-modal .dr-k .box .v{font-size:19px;color:var(--pg-d);margin-top:4px} .dr-modal .dr-k .box .v u{font-size:11.5px;text-decoration:none;color:var(--t3);margin-left:3px} .dr-modal table{width:100%;border-collapse:collapse;font-size:12.5px} .dr-modal th{background:#f6f9f7;color:var(--t3);font-weight:500;text-align:left;padding:9px 10px;border-bottom:1px solid var(--bd-s);position:sticky;top:0;z-index:1} .dr-modal td{padding:10px;border-bottom:1px solid var(--bd-s);vertical-align:top} .dr-modal tr:last-child td{border-bottom:0} .dr-modal .mono{font-variant-numeric:tabular-nums} .dr-modal .dim{color:var(--t3);font-size:11.5px} .dr-modal .dr-st{display:inline-block;padding:1px 8px;border-radius:20px;font-size:11px;white-space:nowrap} .dr-modal .dr-st-ok{background:#e8f4ee;color:#1f7a4d} .dr-modal .dr-st-wait{background:#fdf2e4;color:#b8621b} .dr-modal .dr-lead{padding:11px 18px 2px;font-size:12px;color:#5d6a64;line-height:1.75} .dr-modal .dr-lead b{color:#1d2a25} .dr-modal .dr-note{padding:10px 18px 6px;font-size:11.5px;color:var(--t3);line-height:1.7} .dr-modal .dr-empty{padding:30px 18px;text-align:center;color:var(--t3);font-size:12.5px}.bx-mk{display:none;position:fixed;inset:0;background:rgba(10,26,18,.35);z-index:82}.bx-mk.on{display:flex;align-items:flex-start;justify-content:center;padding-top:10vh}.bx-dlg{background:#fff;border-radius:14px;width:min(640px,92vw);padding:14px}#pfMeetPool{display:flex;flex-wrap:wrap;gap:8px;margin:8px 0}#pfMeetPool button{min-width:72px;padding:8px;border:1px solid #d5ddd8;border-radius:8px;background:#fff}#pfMeetPool button.on{outline:2px solid #1f7a4d}#pfMeetPool button.mt-def{background:#e8eefc;border:2px solid #2f5fbf}#pfMeetPool button.mt-ok{background:#e5f6ea;border:2px solid #1f8a4c}#pfMeetPool button.mt-proxy{background:#fff4e0;border:2px dashed #e07a00}#pfMeetPool button.mt-wait{background:#fff;border:2px dotted #5d6a64}#pfMeetPool button.mt-absent{background:#fde8e8;border:2px solid #b42318;color:#8a1c14}.mt-self{flex-basis:100%;color:#5d6a64;margin-top:6px}.meet-why{color:#8a1c14;font-weight:600}.till-err{color:#b42318;font-weight:600}';
       document.head.appendChild(css);
     }
   }
@@ -1263,15 +1276,19 @@
     var absHere = r.absent || [];
     $('pfMeetBody').innerHTML = r.t + '　' + r.k + '　' + f1(r.a) + (r.u === 'piece' ? ' 件' : ' 万元') + '　1 笔<br>经办：' +
       nameOf(byOf(r)) + '（' + byOf(r) + '）· ' + (r.src || '') + '录入 · 状态：' + ST[stOf(r)][0] +
-      '<br>票池　' + VOTERS.length + ' 人可投 · 扣经办人自己后 ' + pool.length + ' 票 · 现 ' + votesOf(r).length + ' 票' +
+      '<br>票池　' + (VOTERS.indexOf(byOf(r)) >= 0
+        ? (VOTERS.length + ' 人可投 · 扣经办人自己后 ' + pool.length + ' 票')
+        : (VOTERS.length + ' 人可投 · 经办人不在名单，不扣，这一笔 ' + pool.length + ' 票')) +
+      ' · 现 ' + votesOf(r).length + ' 票' +
       (absHere.length ? '<br>缺席 ' + absHere.length + ' 人 · ' + absHere.map(function (a) { return nameOf(a.no); }).join('、') : '') +
       (r.draft ? '<br>这一笔是草稿，本人还没核对，任何人不能替投' : '');
     $('pfMeetPool').innerHTML = pool.map(function (n) {
       var prox = proxyOf(r, n);
       var voted = votesOf(r).indexOf(n) >= 0;
       var gone = absHere.some(function (a) { return a.no === n; });
-      var cls = prox ? 'mt-proxy' : (gone ? 'mt-absent' : (voted ? 'mt-ok' : 'mt-wait'));
-      var txt = prox ? '已投 · 代 △' : (gone ? '缺席 ×' : (voted ? '已投 ✓' : '未投 ○'));
+      var agreed = agreeNo(n);
+      var cls = agreed ? 'mt-def' : (prox ? 'mt-proxy' : (gone ? 'mt-absent' : (voted ? 'mt-ok' : 'mt-wait')));
+      var txt = agreed ? '已投 · 默认同意' : (prox ? '已投 · 代 △' : (gone ? '缺席 ×' : (voted ? '已投 ✓' : '未投 ○')));
       return '<button type="button" class="' + cls + (MEET_FOR === n ? ' on' : '') + '" data-act="meetPick" data-no="' + n + '"' +
         (prox ? " data-proxy='" + JSON.stringify(prox).replace(/'/g, '') + "'" : '') + '>' +
         nameOf(n) + '<br>' + txt + '</button>';
@@ -1320,11 +1337,15 @@
     return { P1: '业绩清分', P2: '我的业绩', P3: '我的业绩', P4: '厅堂统计' }[ROLE] || '业绩';
   }
   function drawerSpec() {
-    if (ROLE === 'P1') return [['renderClear', '每日清分'], ['renderConfirm', '网点确认'], ['renderDead', '死账'], ['renderMeet', '清分会议']];
-    if (ROLE === 'P2') return [['renderClear', '我的业绩'], ['renderConfirm', '网点确认'], ['renderErr', '差错复核']];
-    if (ROLE === 'P3') return [['renderSettle', '日终结算'], ['renderClear', '我的业绩'], ['renderConfirm', '网点确认']];
-    if (ROLE === 'P4') return [['renderHallStat', '厅堂统计'], ['renderQueue', '等候时长'], ['renderClear', '业绩清分'], ['renderConfirm', '网点确认']];
-    return [['renderClear', '每日清分'], ['renderConfirm', '网点确认'], ['renderDead', '死账']];
+    var spec;
+    if (ROLE === 'P1') spec = [['renderClear', '每日清分'], ['renderDead', '死账'], ['renderMeet', '清分会议']];
+    else if (ROLE === 'P2') spec = [['renderClear', '我的业绩'], ['renderErr', '差错复核']];
+    else if (ROLE === 'P3') spec = [['renderSettle', '日终结算'], ['renderClear', '我的业绩']];
+    else if (ROLE === 'P4') spec = [['renderHallStat', '厅堂统计'], ['renderQueue', '等候时长'], ['renderClear', '业绩清分']];
+    else spec = [['renderClear', '每日清分'], ['renderDead', '死账']];
+    var me = STAFF.filter(function (s) { return s.no === meNo(); })[0];
+    if (me && voterRow(me)) spec.splice(1, 0, ['renderConfirm', '网点确认']);
+    return spec;
   }
   function paintEntry() {
     var b = document.querySelector('#v10ViewBar button[data-view="perf"]');
@@ -1522,14 +1543,24 @@
 
   function applyStaff(rows) {
     STAFF = rows.map(function (r) {
-      var code = toShellRole(r.role_code);
-      var gap = !r.role_code;
+      var roleGiven = !(r.role_code == null || r.role_code === '');
+      var enterGiven = !(r.account_state == null || r.account_state === '');
+      var code = roleGiven ? toShellRole(r.role_code) : '';
       var st = r.account_state === 'refuse' ? '拒绝' : '在岗';
-      return { no: r.employee_no, name: r.name, role: code, st: st, gap: gap ? '后端无角色' : '' };
+      return {
+        no: r.employee_no, name: r.name, role: code, st: st,
+        gap: roleGiven ? '' : '后端无角色',
+        enter: enterGiven ? r.account_state === 'enter' : false,
+        enterNote: enterGiven ? '' : '后端未返回该字段',
+        title: r.title || '',
+        acct: enterGiven ? r.account_state : ''
+      };
     });
     DATA.staff.rows = STAFF;
     DATA.staff.src = 'api';
     rebuildVoters();
+    if (window.syncDoor) window.syncDoor();
+    if (window.syncRoster) window.syncRoster();
     var found = bindMe(SESSION_NO);
     if (!found) ME.missing = true;
     seed();
@@ -1556,6 +1587,6 @@
     renderTablet: renderTablet, renderClear: renderClear, renderDead: renderDead, renderConfirm: renderConfirm,
     why: why, bxChain: bxChain, bxSec: bxSec, bxRows: bxRows,
     DATA: DATA, mapCheck: mapCheck, seed: seed,
-    staffName: nameOf, bindMe: bindMe
+    staffName: nameOf, bindMe: bindMe, voterRow: voterRow, staffAll: function () { return STAFF; }
   };
 })();
