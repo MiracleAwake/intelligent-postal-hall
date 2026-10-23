@@ -2147,6 +2147,7 @@ body.rb-off .ribbon{ height:0; min-height:0; overflow:hidden; }
 <script src="hall-wire.js"></script>
 <script src="hall-go.js"></script>
 <script src="hall-live.js"></script>
+<script src="hall-views.js?v=abs4"></script>
 <script>
 /* ============================================================
    10 员工端 · 五合一壳
@@ -2453,7 +2454,7 @@ body.rb-off .ribbon{ height:0; min-height:0; overflow:hidden; }
 
   var MANUAL = {
     P1: {
-      role: 'P1', no: '1001', nm: '王××', badge: '局', label: '支局经理',
+      role: 'P1', badge: '局', label: '支局经理',
       desk: '东风路支局 · 支局长室', scope: 'site', page: '06_支局经理页.html',
       railLabel: '业务模块', color: '#00693e', pgroup: '二级页/06_',
       tab1: '主页 · 支局概览', tab2: '授权待办 · 3 件',
@@ -2466,7 +2467,7 @@ body.rb-off .ribbon{ height:0; min-height:0; overflow:hidden; }
       kpiTitle: '本支局今日数据', kpiSub: '更新于 17:52 · 支局口径'
     },
     P2: {
-      role: 'P2', no: '1003', nm: '赵××', badge: '金', label: '普通柜员',
+      role: 'P2', badge: '金', label: '普通柜员',
       desk: '东风路支局 · 01 号台', scope: 'mine', page: '05_普通柜员页.html',
       railLabel: '业务模块', color: '#1a5f8a', pgroup: '二级页/05_',
       tab1: '主页 · 本日经办', tab2: '李×× · 定期存款到期转存',
@@ -2479,7 +2480,7 @@ body.rb-off .ribbon{ height:0; min-height:0; overflow:hidden; }
       kpiTitle: '本日业务数据', kpiSub: '更新于 15:47 · 口径见各卡明细'
     },
     P3: {
-      role: 'P3', no: '1017', nm: '秦××', badge: '邮', label: '邮政营业',
+      role: 'P3', badge: '邮', label: '邮政营业',
       desk: '东风路支局 · 2 号台席', scope: 'mine', page: '07_邮政营业页.html',
       railLabel: '业务模块', color: '#0f6b4f', pgroup: '二级页/07_',
       tab1: '主页 · 台席概览', tab2: '收寄 · 国际包裹',
@@ -2492,7 +2493,7 @@ body.rb-off .ribbon{ height:0; min-height:0; overflow:hidden; }
       kpiTitle: '本日收寄与代办', kpiSub: '更新于 16:02 · 台席口径'
     },
     P4: {
-      role: 'P4', no: '1004', nm: '孙××', badge: '厅', label: '大堂经理',
+      role: 'P4', badge: '厅', label: '大堂经理',
       desk: '东风路支局 · 厅堂', scope: 'mine', page: '09_大堂经理页.html',
       railLabel: '业务模块', color: '#6b4fbb', pgroup: '二级页/09_',
       tab1: '主页 · 厅堂概览', tab2: '今日厅堂分流与预约',
@@ -2505,7 +2506,7 @@ body.rb-off .ribbon{ height:0; min-height:0; overflow:hidden; }
       kpiTitle: '本日厅堂数据', kpiSub: '更新于 15:47 · 厅堂口径'
     },
     P5: {
-      role: 'P5', no: '9001', nm: '郑××', badge: '管', label: '系统管理员',
+      role: 'P5', badge: '管', label: '系统管理员',
       desk: '东风区分公司 · 信息岗', scope: 'region', page: '08_管理员端.html',
       railLabel: '管理模块', color: '#4a5568', pgroup: '二级页/08_',
       staffGroup: '组织',
@@ -2664,10 +2665,11 @@ body.rb-off .ribbon{ height:0; min-height:0; overflow:hidden; }
     try { localStorage.setItem(SKEY, JSON.stringify(o)); } catch (e) {}   /* 给 00 交接用 */
     if (window.HallWire && HallWire.session) HallWire.session(o).catch(function () {});
   }
-  function sessionOf(role) {
+  function sessionOf(role, no) {
     var m = MANUAL[role];
+    var nm = window.HallViews && HallViews.staffName ? HallViews.staffName(no) : no;
     return {
-      no: m.no, nm: m.nm, post: role, role: m.label,
+      no: no, nm: nm, post: role, role: m.label,
       site: 'df', scope: m.scope, terminal: '东风路 01 号终端',
       at: Date.now()
     };
@@ -2874,7 +2876,7 @@ body.rb-off .ribbon{ height:0; min-height:0; overflow:hidden; }
     if (!ks.length) { $('kpis').innerHTML = ''; return; }
     $('kpis').className = 'kpis' + (ks.length >= 7 ? ' k8' : '');
     $('kpis').innerHTML = ks.map(function (k, i) {
-      return '<div class="kpi' + (k.warn ? ' warn' : '') + '" data-kpi="' + i + '" tabindex="0" role="button">' +
+      return '<div class="kpi' + (k.warn ? ' warn' : '') + '"' + (k.drill ? ' data-drill="' + k.drill + '"' : '') + ' data-kpi="' + i + '" tabindex="0" role="button">' +
         '<div class="k-t">' + icon(k.i, 'ic-xs') + '<span>' + esc(k.t) + '</span></div>' +
         '<div class="k-v">' + (k.v || '') + '</div>' +
         '<div class="k-s">' + (k.s || '') + '</div></div>';
@@ -3057,6 +3059,7 @@ body.rb-off .ribbon{ height:0; min-height:0; overflow:hidden; }
   }
 
   function renderBoard() {
+    if (window.HallViews) HallViews.use(cur.role, cur.no);
     closeAdminPane();
     var b = cur.board;
     if (!b) { $('v10Board').innerHTML = ''; return; }
@@ -3759,9 +3762,17 @@ body.rb-off .ribbon{ height:0; min-height:0; overflow:hidden; }
         return;
       }
       var op = e.target.closest && e.target.closest('.v10-lnk');
-      if (op) { toast('「' + op.getAttribute('data-op') + '」按岗位跳到对应明细页'); return; }
+      if (op) {
+        if (window.HallViews) HallViews.consume(op.getAttribute('data-op'));
+        return;
+      }
       var kpi = e.target.closest && e.target.closest('.kpi');
-      if (kpi) { toast('这张卡的明细在统计组里 —— 点左栏『' + (cur.nav[4] || cur.nav[0]).n + '』'); return; }
+      if (kpi) {
+        var kind = kpi.getAttribute('data-drill');
+        if (kind && window.HallViews) { HallViews.openDrill(kind); return; }
+        toast('这张卡的明细在统计组里 —— 点左栏『' + (cur.nav[4] || cur.nav[0]).n + '』');
+        return;
+      }
       var tk = e.target.closest && e.target.closest('.task');
       if (tk) { toast('任务卡：' + (tk.title || '打开明细')); return; }
       /* 模型区：思路块折叠 / 建议按钮（一律要人确认） */
@@ -3979,8 +3990,12 @@ body.rb-off .ribbon{ height:0; min-height:0; overflow:hidden; }
     });
   }
 
-  function start(role) {
+  function start(role, no) {
     cur = P[role];
+    if (no) {
+      cur.no = no;
+      cur.nm = window.HallViews && HallViews.staffName ? HallViews.staffName(no) : no;
+    }
     if (!cur) { document.body.innerHTML = '<p style="padding:40px">岗位配置缺失：' + role + '</p>'; return; }
     renderAll();
     wire();
@@ -4007,16 +4022,16 @@ body.rb-off .ribbon{ height:0; min-height:0; overflow:hidden; }
      让它们进 P2/P5 的视图，会把别人的名字和台席安在自己头上，那是造假数据，不做。 */
   var LOGIN = {
     '1001': { role: 'P1', site: 'df' },
+    '1002': { role: 'P2', site: 'df' },
     '1003': { role: 'P2', site: 'df' },
     '1017': { role: 'P3', site: 'df' },
     '1004': { role: 'P4', site: 'df' },
     '9001': { role: 'P5', site: 'hq' }
   };
   var NO_PAGE = {
-    '1002': '钱×× · 综合柜员（由 P2 视图承接）',
-    '1010': '褚×× · 综合柜员（由 P2 视图承接）',
-    '1018': '尤×× · 理财经理（由 P5 视图承接）',
-    '1020': '施×× · 保安（无工作台）'
+    '1010': '后端无角色',
+    '1018': '后端无角色',
+    '1020': '该岗位暂无工作台'
   };
   var PW = '123456';   /* 原型口令，写死是故意的：不连工号库 */
 
@@ -4045,11 +4060,9 @@ body.rb-off .ribbon{ height:0; min-height:0; overflow:hidden; }
   function renderLoginChips() {
     var box = $('lgChips');
     if (!box) return;
-    box.innerHTML = ['1001', '1003', '1017', '1004', '9001'].map(function (no) {
+    box.innerHTML = ['1001', '1002', '1003', '1017', '1004', '9001'].map(function (no) {
       var m = MANUAL[LOGIN[no].role];
-      var st = null;
-      for (var i = 0; i < STAFF.length; i++) if (STAFF[i][4] === no) st = STAFF[i];
-      var nm = st ? st[0] : m.nm;
+      var nm = window.HallViews && HallViews.staffName ? HallViews.staffName(no) : no;
       return '<button type="button" class="chip" data-no="' + no + '">' +
         '<i class="dot"></i><span class="who"><span class="nm">' + nm + '</span>' +
         '<span class="ps">' + m.label + '</span></span><span class="no">' + no + '</span></button>';
@@ -4103,8 +4116,7 @@ body.rb-off .ribbon{ height:0; min-height:0; overflow:hidden; }
     var pw = $('lgPw').value || '';
     if (!no) { lgErr('请输入员工号（演示：1001 / 1003 / 1017 / 1004 / 9001）'); $('lgNo').focus(); return; }
     if (NO_PAGE[no]) {
-      lgErr('工号 ' + no + ' 是「' + NO_PAGE[no] + '」—— 该岗位暂无工作台页面。'
-        + '五合一按岗位做视图，请用 1003（普通柜员）或 9001（管理员）进入。');
+      lgErr('工号 ' + no + '：' + NO_PAGE[no] + '。');
       return;
     }
     var st = LOGIN[no];
@@ -4115,9 +4127,9 @@ body.rb-off .ribbon{ height:0; min-height:0; overflow:hidden; }
       return;
     }
     if (pw !== PW) { lgErr('口令不正确（原型口令 123456）'); $('lgPw').focus(); return; }
-    writeSession(sessionOf(st.role));
+    writeSession(sessionOf(st.role, no));
     hideLogin();
-    start(st.role);
+    start(st.role, no);
   }
 
   /* ========== ⑧ 新建会话：说一句话，进对应的业务页 ========== */
@@ -4394,11 +4406,11 @@ body.rb-off .ribbon{ height:0; min-height:0; overflow:hidden; }
       if (!local) { showLogin(); return; }
       cur = P[role];
       hideLogin();
-      start(role);
+      start(role, q.get('no') || { P1: '1001', P2: '1003', P3: '1017', P4: '1004', P5: '9001' }[role]);
       return;
     }
     /* 会话：同标签页刷新还在（sessionStorage）；00_登录 送来的只认 15 秒内的（readSession 判过） */
-    if (s && P[s.post]) { hideLogin(); start(s.post); return; }
+    if (s && P[s.post]) { hideLogin(); start(s.post, s.no); return; }
     try { sessionStorage.removeItem(SKEY); } catch (e) {}
     try { localStorage.removeItem(SKEY); } catch (e) {}
     showLogin();

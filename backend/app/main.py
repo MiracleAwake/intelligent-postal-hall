@@ -88,6 +88,10 @@ def create_app() -> FastAPI:
     def live_js():
         return FileResponse(_SHELL_DIR / "hall-live.js", media_type="application/javascript")
 
+    @app.get("/hall-views.js")
+    def views_js():
+        return FileResponse(_SHELL_DIR / "hall-views.js", media_type="application/javascript")
+
     @app.post("/api/speech")
     def speech(body: dict):
         heard = accept_speech(body.get("text"), audio_ref=body.get("audio_ref"))
